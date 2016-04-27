@@ -223,7 +223,7 @@ def handle(data, stdout):
         ans = create_answer("error", "Missing board name.")
         if "list" in data:
             ans = create_answer("success", list_devices())
-        elif "tftp" in data:
+        elif "upload" in data:
             ans = create_answer("success", str(os.path.join(args.tftp_dir, user)))
         #This is status from LAVA, offline_by will always be "daemon"
         #TODO: Add a status_remote to display the user who is working on the board

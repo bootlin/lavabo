@@ -40,10 +40,15 @@ parser_serial.add_argument("BOARD", help="hostname of the board to get serial co
 parser_status = subparsers.add_parser("status", description="Get board status.", help="get board status.")
 parser_status.add_argument("BOARD", help="hostname of the board whose status is requested.")
 
-parser_tftp = subparsers.add_parser("tftp", description="Send or delete files on lavabo-server.", help="send or delete files on lavabo-server.")
-parser_tftp.add_argument("FILE", help="path to the file to manage.")
+parser_upload = subparsers.add_parser("upload", description="Send files to lavabo-server.", help="send files to lavabo-server.")
+parser_upload.add_argument("FILES", nargs="+", help="full path of the files to send.")
+parser_upload.add_argument("-r", "--rename", nargs="+", help="send each file in FILES to lavabo-server under the given name.")
 
 args = parser.parse_args()
+
+if args.cmd == "upload" and args.rename is not None and len(args.rename) != len(args.FILES):
+    print "There is not the same number of arguments for FILES and --rename."
+    sys.exit(0)
 
 def get_available_port():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -53,7 +58,7 @@ def get_available_port():
     sock.close()
     return port
 
-if args.cmd == "tftp":
+if args.cmd == "upload":
     paramiko.util.log_to_file("paramiko.log")
 
     client = paramiko.SSHClient()
@@ -69,8 +74,9 @@ if args.cmd == "tftp":
     client.connect(hostname, username=username, pkey=key)
     sftp_client = client.open_sftp()
 
-    sftp_client.put(args.FILE, os.path.basename(args.FILE))
-    print "File successfully sent to lavabo-server."
+    for local_file, remote_file in zip(args.FILES, args.rename if args.rename is not None else args.FILES):
+        sftp_client.put(local_file, os.path.basename(remote_file))
+    print "File(s) successfully sent to lavabo-server."
 
     client.close()
 else:
