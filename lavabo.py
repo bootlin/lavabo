@@ -17,6 +17,9 @@ parser.add_argument("LAVABO_SERVER_USER", help="the user used to connect to lava
 
 subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
 
+parser_add_user = subparsers.add_parser("add-user", description="Add user to lavabo-server. N.B.: You have to add user's SSH key to the computer hosting lavabo-server.", help="add user to lavabo-server.")
+parser_add_user.add_argument("USERNAME", help="username of the user to add to lavabo-server.")
+
 parser_list = subparsers.add_parser("list", description="List all boards available in LAVA.", help="list available boards")
 
 parser_offline = subparsers.add_parser("offline", description="Put board offline.", help="put board offline.")
@@ -75,6 +78,8 @@ else:
 
     if args.cmd in ["list", "update"]:
         msg = json.dumps({args.cmd: ""})
+    elif args.cmd == "add-user":
+        msg = json.dumps({args.cmd: {"username": args.USERNAME}})
     else:
         msg = json.dumps({args.cmd: {"board": args.BOARD}})
 

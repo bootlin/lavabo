@@ -21,10 +21,10 @@ parser.add_argument("LAVABO_USER", help="user to authenticate against in lavabo"
 parser.add_argument("LAVA_USER", help="username for the LAVA server")
 parser.add_argument("LAVA_TOKEN", help="token for LAVA server API")
 parser.add_argument("LAVA_SERVER", help="URL of LAVA server API")
+parser.add_argument('--tftp-dir', default="/var/lib/lava/dispatcher/tmp/", help="the TFTP root directory used to serve files to boards.")
 
 subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
 parser_sftp = subparsers.add_parser("internal-sftp", description="Launch sftp server.", help="launch sftp-server.")
-parser_sftp.add_argument('--tftp-dir', default="/var/lib/lava/dispatcher/tmp/", help="the TFTP root directory used to serve files to boards.")
 
 parser_interact = subparsers.add_parser("interact", description="Listen to stdin and answer to stdout.", help="listen to stdin and answer to stdout.")
 
@@ -201,6 +201,15 @@ def put_online(db_cursor, user, device_name, force=False):
     #FIXME: What about reserved, offlining, running?
     return create_answer("error", "Device is probably running a job.")
 
+def add_user(db_cursor, username):
+    try:
+        db_cursor.execute("INSERT INTO users VALUES (?)", (username,))
+    except sqlite3.IntegrityError:
+        return create_answer("error", "Failed to create user %s." % username)
+    os.mkdir(os.path.join(args.tftp_dir, username))
+    db_cursor.connection.commit()
+    return create_answer("success", "User %s successfully created. Adding user's SSH key to lavabo-server is needed to complete user creation." % username)
+
 def handle(data, stdout):
     data = json.loads(data)
     user = args.LAVABO_USER
@@ -237,6 +246,11 @@ def handle(data, stdout):
         elif "power-off" in data:
             if "board" in data["power-off"]:
                 ans = power_off(db_cursor, user, data["power-off"]["board"])
+        elif "add-user" in data:
+            if "username" in data["add-user"]:
+                ans = add_user(db_cursor, data["add-user"]["username"])
+            else:
+                ans = create_answer("error", "Missing username.")
         else:
             ans = create_answer("error", "Unknown command.")
         os.write(stdout, ans+"\n")

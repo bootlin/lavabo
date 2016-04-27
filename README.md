@@ -30,6 +30,13 @@ Open `/home/user/.ssh/authorized_keys` and add `command="python /path/to/lavabo-
 
 `lava_server` is the URL of the LAVA server API (it should end with `/RPC2`).
 
+Give sufficient permission to `user` to create directories in the TFTP directory used by LAVA (as advised when installing LAVA, it should be `/var/lib/lava/dispatcher/tmp` or look at `/etc/default/tftpd-hpa`):
+
+```
+ # chgrp user /var/lib/lava/dispatcher/tmp
+ # chmod g+rwx /var/lib/lava/dispacther/tmp
+```
+
 ### lavabo
 
 Install lavabo dependency:
