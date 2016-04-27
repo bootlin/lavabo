@@ -195,7 +195,6 @@ def put_online(db_cursor, user, device_name, force=False):
 def handle(data, stdout):
     data = json.loads(data)
     user = args.LAVABO_USER
-    db_conn = sqlite3.connect("remote-control.db")
     db_cursor = db_conn.cursor()
     try:
         db_cursor.execute('SELECT * FROM users WHERE username = ?', (user,))
@@ -237,7 +236,6 @@ def handle(data, stdout):
         os.write(stdout, ans+"\n")
     finally:
         db_cursor.close()
-        db_conn.close()
 
 # Taken from https://github.com/jborg/attic/blob/master/attic/remote.py
 BUFSIZE = 10 * 1024 * 1024
@@ -258,6 +256,7 @@ def serve():
            if not data:
                return
            handle(data, stdout_fd)
+    db_conn.close()
 
 # Taken from: https://github.com/kernelci/lava-ci/blob/master/lib/utils.py
 def validate_input(username, token, server):
@@ -280,22 +279,19 @@ def connect(url):
         sys.exit(1)
 
 def init_db():
+    global db_conn
     db_conn = sqlite3.connect("remote-control.db")
     db_cursor = db_conn.cursor()
     db_cursor.execute("CREATE TABLE IF NOT EXISTS users (username PRIMARY KEY)")
     db_cursor.execute("CREATE TABLE IF NOT EXISTS devices (hostname PRIMARY KEY)")
     db_conn.execute("CREATE TABLE IF NOT EXISTS reservations (device_name, last_use INTEGER, made_by, reserved INTEGER, FOREIGN KEY(device_name) REFERENCES devices(hostname), FOREIGN KEY(made_by) REFERENCES users(username))")
-    db_cursor.execute("INSERT OR IGNORE INTO users VALUES ('0leil')")
-    db_cursor.execute("INSERT OR IGNORE INTO users VALUES ('0leil1')")
-    db_cursor.execute("INSERT OR IGNORE INTO devices VALUES ('sun8i-a33-sinlinx-sina33_01')")
-    db_cursor.execute("INSERT OR IGNORE INTO reservations VALUES ('sun8i-a33-sinlinx-sina33_01', 0, NULL, 0)")
     db_conn.commit()
     db_cursor.close()
-    db_conn.close()
 
 args = parser.parse_args()
 devices = {}
 proxy = None
+db_conn = None
 
 init_db()
 url = validate_input(args.LAVA_USER, args.LAVA_TOKEN, args.LAVA_SERVER)
