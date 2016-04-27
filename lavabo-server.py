@@ -56,7 +56,7 @@ class Device(object):
     def get_serial_port(self):
         return self.serial_command.split()[2]
 
-def get_device_list():
+def get_device_list(db_conn):
     devices.clear()
     config_parser = ConfigParser()
 
@@ -71,6 +71,15 @@ def get_device_list():
         off_command = config_parser.get("__main__", "power_off_cmd")
         serial_command = config_parser.get("__main__", "connection_command")
         devices[device_name] = Device(device_name, on_command, off_command, serial_command)
+        db_cursor = db_conn.cursor()
+        try:
+            db_cursor.execute("INSERT INTO devices VALUES (?)", (device_name,))
+            db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, 0, None, 0))
+            db_conn.commit()
+        except sqlite3.IntegrityError:
+            pass
+        finally:
+            db_cursor.close()
     return devices
 
 def exists(device_name):
@@ -300,5 +309,5 @@ proxy = connect(url)
 if args.cmd == "internal-sftp":
     subprocess.call(("/usr/lib/openssh/sftp-server -d %s" % os.path.join(args.tftp_dir, args.LAVABO_USER)).split())
 else:
-    get_device_list()
+    get_device_list(db_conn)
     serve()
