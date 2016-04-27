@@ -26,8 +26,6 @@ subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
 parser_sftp = subparsers.add_parser("internal-sftp", description="Launch sftp server.", help="launch sftp-server.")
 parser_sftp.add_argument('--tftp-dir', default="/var/lib/lava/dispatcher/tmp/", help="the TFTP root directory used to serve files to boards.")
 
-parser_port_redirection = subparsers.add_parser("port-redirection", description="Wait infinitely. This is used when needing port redirection for serial connection.", help="wait infinitely. This is used when needing port redirection for serial connection.")
-
 parser_interact = subparsers.add_parser("interact", description="Listen to stdin and answer to stdout.", help="listen to stdin and answer to stdout.")
 
 parser_interact.add_argument('--devices-conf-dir', default="/etc/lava-dispatcher/devices/", help="the directory used to store LAVA device configuration files.")
@@ -305,9 +303,6 @@ proxy = connect(url)
 
 if args.cmd == "internal-sftp":
     subprocess.call(("/usr/lib/openssh/sftp-server -d %s" % os.path.join(args.tftp_dir, args.LAVABO_USER)).split())
-elif args.cmd == "port-redirection":
-    while True:
-        time.sleep(1000)
 else:
     get_device_list()
     serve()

@@ -88,9 +88,23 @@ else:
 
     if args.cmd == "serial" and answer["status"] == "success":
         port = get_available_port()
-        ssh = subprocess.Popen(("ssh -L %d:localhost:%d %s@%s port-redirection" % (port, answer["content"]["port"], args.LAVABO_SERVER_USER, args.LAVABO_SERVER)).split())
-	print "You can now access the serial in localhost on port %d." % port
-	raw_input("Press any key to close port redirection.")
+        ssh = subprocess.Popen(("ssh -N -L %d:localhost:%d %s@%s" % (port, answer["content"]["port"], args.LAVABO_SERVER_USER, args.LAVABO_SERVER)).split())
+        serial = None
+        for i in range(0,5):
+            serial = pexpect.spawn("telnet localhost %d" % port)
+            index = serial.expect(["Connected to localhost.", "Connection refused", "Connection closed"])
+            if index == 0:
+                break
+            serial.close()
+            if i < 4:
+                print "Try %d to connect to serial failed. %d attempts remaining." % (i+1, 5-i-1)
+                time.sleep(2)
+        if serial.isalive():
+            print "You have now access to the serial of %s." % args.BOARD
+            serial.interact()
+            serial.close()
+        else:
+            print "error: Could not establish serial connection."
         ssh.terminate()
     else:
         print "%s: %s" % (answer["status"], answer["content"])
