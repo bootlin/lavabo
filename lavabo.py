@@ -40,8 +40,6 @@ parser_status.add_argument("BOARD", help="hostname of the board whose status is 
 parser_tftp = subparsers.add_parser("tftp", description="Send or delete files on lavabo-server.", help="send or delete files on lavabo-server.")
 parser_tftp.add_argument("FILE", help="path to the file to manage.")
 
-parser_update = subparsers.add_parser("update", description="Update list of available boards.", help="update list of available boards.")
-
 args = parser.parse_args()
 
 def get_available_port():
