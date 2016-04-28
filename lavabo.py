@@ -40,8 +40,7 @@ parser_status = subparsers.add_parser("status", description="Get board status.",
 parser_status.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board whose status is requested. If omitted, gotten from BOARD environment variable.")
 
 parser_upload = subparsers.add_parser("upload", description="Send files to lavabo-server.", help="send files to lavabo-server.")
-parser_upload.add_argument("FILES", nargs="+", help="full path of the files to send.")
-parser_upload.add_argument("-r", "--rename", nargs="+", help="send each file in FILES to lavabo-server under the given name.")
+parser_upload.add_argument("FILES", nargs="+", help="full path of the files to send. You can rename the files after being uploaded by separating local filenames and remote filenames with a colon (:). e.g.: upload file1:file2 file2:file3 will upload file1 and file2 and respectively rename them file2 and file3 on lavabo-server.")
 
 args = parser.parse_args()
 
@@ -54,10 +53,6 @@ port = config_parser.getint("lavabo-server", "port")
 if args.cmd not in ["upload", "list", "add-user"] and args.BOARD is None:
     print "No board specified. Please add BOARD environment variable or as an argument to the command."
     sys.exit(1)
-
-if args.cmd == "upload" and args.rename is not None and len(args.rename) != len(args.FILES):
-    print "There is not the same number of arguments for FILES and --rename."
-    sys.exit(0)
 
 def get_available_port():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -114,8 +109,11 @@ if args.cmd == "upload":
         sys.exit(1)
     sftp_client = transport.open_sftp_client()
 
-    for local_file, remote_file in zip(args.FILES, args.rename if args.rename is not None else args.FILES):
-        sftp_client.put(local_file, os.path.basename(remote_file))
+    for upload in args.FILES:
+        paths = upload.split(":")
+        local_path = paths[0]
+        remote_file = os.path.basename(paths[1]) if len(paths) == 2 else os.path.basename(local_path)
+        sftp_client.put(local_path, remote_file)
     print "File(s) successfully sent to lavabo-server."
 
     sftp_client.close()
