@@ -21,17 +21,17 @@ parser_add_user.add_argument("USERNAME", help="username of the user to add to la
 
 parser_list = subparsers.add_parser("list", description="List all boards available in LAVA.", help="list available boards")
 
-parser_offline = subparsers.add_parser("offline", description="Put board offline.", help="put board offline.")
-parser_offline.add_argument("BOARD", help="hostname of the board to put offline.")
-
-parser_online = subparsers.add_parser("online", description="Put board online.", help="put board online.")
-parser_online.add_argument("BOARD", help="hostname of the board to put online.")
-
 parser_power_off = subparsers.add_parser("power-off", description="Power board off.", help="power board off.")
 parser_power_off.add_argument("BOARD", help="hostname of the board to power off.")
 
 parser_power_on = subparsers.add_parser("power-on", description="Power board on.", help="power board on.")
 parser_power_on.add_argument("BOARD", help="hostname of the board to power on.")
+
+parser_release = subparsers.add_parser("release", description="Release the board and put it online in LAVA if possible.", help="release the board and put it online in LAVA if possible.")
+parser_release.add_argument("BOARD", help="hostname of the board to put online.")
+
+parser_reserve = subparsers.add_parser("reserve", description="Reserve board and put it offline in LAVA if needed.", help="reserve board and put it offline in LAVA if needed.")
+parser_reserve.add_argument("BOARD", help="hostname of the board to put offline.")
 
 parser_serial = subparsers.add_parser("serial", description="Redirect port on lavabo-server to localhost to get serial connection.", help="redirect port on lavabo-server to localhost to get serial connection.")
 parser_serial.add_argument("BOARD", help="hostname of the board to get serial connection from.")

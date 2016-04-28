@@ -234,12 +234,12 @@ def handle(data, stdout):
         elif "serial" in data:
             if "board" in data["serial"]:
                 ans = get_serial(db_cursor, user, data["serial"]["board"])
-        elif "online" in data:
-            if "board" in data["online"]:
-                ans = put_online(db_cursor, user, data["online"]["board"], data["online"].get("force", False))
-        elif "offline" in data:
-            if "board" in data["offline"]:
-                ans = put_offline(db_cursor, user, data["offline"]["board"], data["offline"].get("thief", False), data["offline"].get("cancel_job", False))
+        elif "release" in data:
+            if "board" in data["release"]:
+                ans = put_online(db_cursor, user, data["release"]["board"], data["release"].get("force", False))
+        elif "reserve" in data:
+            if "board" in data["reserve"]:
+                ans = put_offline(db_cursor, user, data["reserve"]["board"], data["reserve"].get("thief", False), data["reserve"].get("cancel_job", False))
         elif "power-on" in data:
             if "board" in data["power-on"]:
                 ans = power_on(db_cursor, user, data["power-on"]["board"])
