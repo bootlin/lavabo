@@ -290,7 +290,11 @@ def add_user(db_cursor, username):
     return create_answer("success", "User %s successfully created. Adding user's SSH key to lavabo-server is needed to complete user creation." % username)
 
 def handle(data, stdout):
-    data = json.loads(data)
+    try:
+        data = json.loads(data)
+    except ValueError as e:
+        os.write(stdout, create_answer("error", "Unable to parse request. Skipping.")+"\n")
+        return
     user = args.LAVABO_USER
     db_cursor = db_conn.cursor()
     try:

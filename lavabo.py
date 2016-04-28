@@ -130,7 +130,11 @@ else:
     ssh.stdin.flush()
     answer = ssh.stdout.readline()
     ssh.terminate()
-    answer = json.loads(answer)
+    try:
+        answer = json.loads(answer)
+    except ValueError as e:
+        print e
+        sys.exit(1)
 
     if args.cmd == "serial" and answer["status"] == "success":
         local_port = get_available_port()
