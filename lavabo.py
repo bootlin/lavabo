@@ -22,22 +22,22 @@ parser_add_user.add_argument("USERNAME", help="username of the user to add to la
 parser_list = subparsers.add_parser("list", description="List all boards available in LAVA.", help="list available boards")
 
 parser_power_off = subparsers.add_parser("power-off", description="Power board off.", help="power board off.")
-parser_power_off.add_argument("BOARD", help="hostname of the board to power off.")
+parser_power_off.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to power off. If omitted, gotten from BOARD environment variable.")
 
 parser_power_on = subparsers.add_parser("power-on", description="Power board on.", help="power board on.")
-parser_power_on.add_argument("BOARD", help="hostname of the board to power on.")
+parser_power_on.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to power on. If omitted, gotten from BOARD environment variable.")
 
 parser_release = subparsers.add_parser("release", description="Release the board and put it online in LAVA if possible.", help="release the board and put it online in LAVA if possible.")
-parser_release.add_argument("BOARD", help="hostname of the board to put online.")
+parser_release.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to put online. If omitted, gotten from BOARD environment variable.")
 
 parser_reserve = subparsers.add_parser("reserve", description="Reserve board and put it offline in LAVA if needed.", help="reserve board and put it offline in LAVA if needed.")
-parser_reserve.add_argument("BOARD", help="hostname of the board to put offline.")
+parser_reserve.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to put offline. If omitted, gotten from BOARD environment variable.")
 
 parser_serial = subparsers.add_parser("serial", description="Redirect port on lavabo-server to localhost to get serial connection.", help="redirect port on lavabo-server to localhost to get serial connection.")
-parser_serial.add_argument("BOARD", help="hostname of the board to get serial connection from.")
+parser_serial.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to get serial connection from. If omitted, gotten from BOARD environment variable.")
 
 parser_status = subparsers.add_parser("status", description="Get board status.", help="get board status.")
-parser_status.add_argument("BOARD", help="hostname of the board whose status is requested.")
+parser_status.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board whose status is requested. If omitted, gotten from BOARD environment variable.")
 
 parser_upload = subparsers.add_parser("upload", description="Send files to lavabo-server.", help="send files to lavabo-server.")
 parser_upload.add_argument("FILES", nargs="+", help="full path of the files to send.")
@@ -50,6 +50,10 @@ config_parser.readfp(args.conf_file)
 hostname = config_parser.get("lavabo-server", "hostname")
 user = config_parser.get("lavabo-server", "user")
 port = config_parser.getint("lavabo-server", "port")
+
+if args.cmd not in ["upload", "list", "add-user"] and args.BOARD is None:
+    print "No board specified. Please add BOARD environment variable or as an argument to the command."
+    sys.exit(1)
 
 if args.cmd == "upload" and args.rename is not None and len(args.rename) != len(args.FILES):
     print "There is not the same number of arguments for FILES and --rename."
