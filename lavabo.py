@@ -6,7 +6,6 @@ import json
 import os
 import subprocess
 import paramiko
-import getpass
 import sys
 import pexpect
 import time
@@ -58,27 +57,59 @@ def get_available_port():
     sock.close()
     return port
 
+def agent_auth(transport, username):
+    """
+    Attempt to authenticate to the given transport using any of the private
+    keys available from an SSH agent.
+    """
+
+    agent = paramiko.Agent()
+    agent_keys = agent.get_keys()
+    if len(agent_keys) == 0:
+        return
+
+    for key in agent_keys:
+        try:
+            transport.auth_publickey(username, key)
+            print "Successfull authentication."
+            return
+        except paramiko.SSHException:
+            pass
+
 if args.cmd == "upload":
     paramiko.util.log_to_file("paramiko.log")
 
-    client = paramiko.SSHClient()
-    #FIXME: loading host keys does not find the right one.
-    #host_keys = paramiko.util.load_host_keys(os.path.expanduser('~/.ssh/known_hosts'))
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    transport = paramiko.Transport((args.LAVABO_SERVER, 22))
+    try:
+        transport.start_client()
+    except paramiko.SSHException:
+        print "SSH negotiation failed."
+        sys.exit(1)
+    try:
+        keys = paramiko.util.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
+    except IOError:
+        keys = {}
 
-    username = args.LAVABO_SERVER_USER
-    hostname = args.LAVABO_SERVER
-    #TODO: Replace this by keyring
-    password = getpass.getpass('Password:')
-    key = paramiko.RSAKey.from_private_key_file(os.path.expanduser("~/.ssh/id_rsa"), password=password)
-    client.connect(hostname, username=username, pkey=key)
-    sftp_client = client.open_sftp()
+    key = transport.get_remote_server_key()
+    if args.LAVABO_SERVER not in keys or key.get_name() not in keys[args.LAVABO_SERVER]:
+        print "WARNING: Unknown host key!"
+    elif keys[args.LAVABO_SERVER][key.get_name()] != key:
+        print "ERROR: Host key has changed!!! Avoiding connection."
+        sys.exit(1)
+
+    agent_auth(transport, args.LAVABO_SERVER_USER)
+    if not transport.is_authenticated():
+        print "ERROR: Authentication failed."
+        transport.close()
+        sys.exit(1)
+    sftp_client = transport.open_sftp_client()
 
     for local_file, remote_file in zip(args.FILES, args.rename if args.rename is not None else args.FILES):
         sftp_client.put(local_file, os.path.basename(remote_file))
     print "File(s) successfully sent to lavabo-server."
 
-    client.close()
+    sftp_client.close()
+    transport.close()
 else:
     ssh = subprocess.Popen(("ssh %s@%s interact" % (args.LAVABO_SERVER_USER, args.LAVABO_SERVER)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
