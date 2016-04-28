@@ -206,7 +206,16 @@ def add_user(db_cursor, username):
         db_cursor.execute("INSERT INTO users VALUES (?)", (username,))
     except sqlite3.IntegrityError:
         return create_answer("error", "Failed to create user %s." % username)
-    os.mkdir(os.path.join(args.tftp_dir, username))
+    try:
+        os.mkdir(os.path.join(args.tftp_dir, username))
+    except OSError:
+        # Directory exists prior to user creation or UNIX user who
+        # launched lavabo-server has unsufficient permission to create
+        # a subdirectory in TFTP directory.
+        # Test if the UNIX user who launched lavabo-server has
+        # sufficient permission to write, read or execute in this directory.
+        if not os.access(os.path.join(args.tftp_dir, username), os.R_OK | os.W_OK | os.X_OK):
+            return create_answer("error", "Failed to create or access subdirectory for user in TFTP directory. Check UNIX permissions.")
     db_cursor.connection.commit()
     return create_answer("success", "User %s successfully created. Adding user's SSH key to lavabo-server is needed to complete user creation." % username)
 
