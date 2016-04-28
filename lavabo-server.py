@@ -102,104 +102,159 @@ def get_status(device_name):
 def get_serial(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
+    for i in range(0,5):
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError:
+            if i == 4:
+                return create_message("error", "Could not acquire lock.")
+            time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
-    if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
-        return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
-    db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
-    #FIXME: Fetchone possibly returns None
-    reservation = db_cursor.fetchone()
-    last_use, made_by, reserved = reservation
-    if reserved == 0:
-        return create_answer("error", "You have to reserve the device.")
-    if made_by != user:
-        return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-    return create_answer("success", {"port": int(devices[device_name].get_serial_port())})
+    try:
+        if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
+            return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
+        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+        #FIXME: Fetchone possibly returns None
+        reservation = db_cursor.fetchone()
+        last_use, made_by, reserved = reservation
+        if reserved == 0:
+            return create_answer("error", "You have to reserve the device.")
+        if made_by != user:
+            return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
+        return create_answer("success", {"port": int(devices[device_name].get_serial_port())})
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
 
 def power_on(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
+    for i in range(0,5):
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError:
+            if i == 4:
+                return create_message("error", "Could not acquire lock.")
+            time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
-    if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
-        return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
-    db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
-    #FIXME: Fetchone possibly returns None
-    reservation = db_cursor.fetchone()
-    last_use, made_by, reserved = reservation
-    if reserved == 0:
-        return create_answer("error", "You have to reserve the device.")
-    if made_by != user:
-        return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-    if devices[device_name].power_on() == 0:
-        return create_answer("success", "Device successfully powered on.")
-    return create_answer("error", "Failed to power on device.")
+    try:
+        if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
+            return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
+        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+        #FIXME: Fetchone possibly returns None
+        reservation = db_cursor.fetchone()
+        last_use, made_by, reserved = reservation
+        if reserved == 0:
+            return create_answer("error", "You have to reserve the device.")
+        if made_by != user:
+            return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
+        if devices[device_name].power_on() == 0:
+            return create_answer("success", "Device successfully powered on.")
+        return create_answer("error", "Failed to power on device.")
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
 
 def power_off(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
+    for i in range(0,5):
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError:
+            if i == 4:
+                return create_message("error", "Could not acquire lock.")
+            time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
-    if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
-        return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
-    db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
-    #FIXME: Fetchone possibly returns None
-    reservation = db_cursor.fetchone()
-    last_use, made_by, reserved = reservation
-    if reserved == 0:
-        return create_answer("error", "You have to reserve the device.")
-    if made_by != user:
-        return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-    if devices[device_name].power_off() == 0:
-        return create_answer("success", "Device successfully powered off.")
-    return create_answer("error", "Failed to power off device.")
+    try:
+        if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
+            return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
+        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+        #FIXME: Fetchone possibly returns None
+        reservation = db_cursor.fetchone()
+        last_use, made_by, reserved = reservation
+        if reserved == 0:
+            return create_answer("error", "You have to reserve the device.")
+        if made_by != user:
+            return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
+        if devices[device_name].power_off() == 0:
+            return create_answer("success", "Device successfully powered off.")
+        return create_answer("error", "Failed to power off device.")
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
 
 def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, force=False):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
+    for i in range(0,5):
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError:
+            if i == 4:
+                return create_message("error", "Could not acquire lock.")
+            time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
-    if device["status"] == "idle":
-        if devices[device_name].put_offline(user):
-            return create_answer("error", "Failed to put device offline.")
-        db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 1))
-        db_cursor.connection.commit()
-        return create_answer("success", "Device put offline.")
-    if device["status"] == "offline":
-        if device["offline_by"] != args.LAVA_USER:
-            return create_answer("error", "Device has been reserved in LAVA without this tool.")
-        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
-        #FIXME: Fetchone possibly returns None
-        reservation = db_cursor.fetchone()
-        last_use, made_by, reserved = reservation
-        if reserved == 1:
-            if made_by != user:
-                return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-            return create_answer("success", "You have already put this device offline.")
-        db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 1))
-        db_cursor.connection.commit()
-        return create_answer("success", "Device put offline.")
-    #FIXME: What about reserved, offlining, running?
-    return create_answer("error", "Device is probably running a job.")
+    try:
+        if device["status"] == "idle":
+            if devices[device_name].put_offline(user):
+                return create_answer("error", "Failed to put device offline.")
+            db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 1))
+            db_cursor.connection.commit()
+            return create_answer("success", "Device put offline.")
+        if device["status"] == "offline":
+            if device["offline_by"] != args.LAVA_USER:
+                return create_answer("error", "Device has been reserved in LAVA without this tool.")
+            db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+            #FIXME: Fetchone possibly returns None
+            reservation = db_cursor.fetchone()
+            last_use, made_by, reserved = reservation
+            if reserved == 1:
+                if made_by != user:
+                    return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
+                return create_answer("success", "You have already put this device offline.")
+            db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 1))
+            db_cursor.connection.commit()
+            return create_answer("success", "Device put offline.")
+        #FIXME: What about reserved, offlining, running?
+        return create_answer("error", "Device is probably running a job.")
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
 
 def put_online(db_cursor, user, device_name, force=False):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
+    for i in range(0,5):
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError:
+            if i == 4:
+                return create_message("error", "Could not acquire lock.")
+            time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
-    if device["status"] == "idle":
-        return create_answer("success", "Device is already online.")
-    if device["status"] == "offline":
-        if device["offline_by"] != args.LAVA_USER:
-            return create_answer("error", "Device has been reserved in LAVA without this tool.")
-        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
-        #FIXME: Fetchone possibly returns None
-        reservation = db_cursor.fetchone()
-        last_use, made_by, reserved = reservation
-        if made_by == user:
-            if devices[device_name].put_online(user):
-                return create_answer("error", "Failed to put device online.")
-            db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 0))
-            db_cursor.connection.commit()
-            return create_answer("success", "Device put online.")
-        return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-    #FIXME: What about reserved, offlining, running?
-    return create_answer("error", "Device is probably running a job.")
+    try:
+        if device["status"] == "idle":
+            return create_answer("success", "Device is already online.")
+        if device["status"] == "offline":
+            if device["offline_by"] != args.LAVA_USER:
+                return create_answer("error", "Device has been reserved in LAVA without this tool.")
+            db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+            #FIXME: Fetchone possibly returns None
+            reservation = db_cursor.fetchone()
+            last_use, made_by, reserved = reservation
+            if made_by == user:
+                if devices[device_name].put_online(user):
+                    return create_answer("error", "Failed to put device online.")
+                db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 0))
+                db_cursor.connection.commit()
+                return create_answer("success", "Device put online.")
+            return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
+        #FIXME: What about reserved, offlining, running?
+        return create_answer("error", "Device is probably running a job.")
+    finally:
+        fcntl.flock(lock, fcntl.LOCK_UN)
 
 def add_user(db_cursor, username):
     try:
@@ -321,6 +376,7 @@ args = parser.parse_args()
 devices = {}
 proxy = None
 db_conn = None
+lock = open("lavabo-server.lock", "w+")
 
 init_db()
 url = validate_input(args.LAVA_USER, args.LAVA_TOKEN, args.LAVA_SERVER)
