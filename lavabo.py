@@ -9,10 +9,10 @@ import paramiko
 import sys
 import pexpect
 import time
+from ConfigParser import ConfigParser
 
 parser = argparse.ArgumentParser(description="Client to connect to lavabo-server used to remote control boards in LAVA.")
-parser.add_argument("LAVABO_SERVER", help="the location of lavabo-server used to remote control boards.")
-parser.add_argument("LAVABO_SERVER_USER", help="the user used to connect to lavabo-server.")
+parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lavabo.conf"), help="the location of lavaboconfiguration file. Default: ./lavabo.conf.")
 
 subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
 
@@ -45,6 +45,12 @@ parser_upload.add_argument("-r", "--rename", nargs="+", help="send each file in 
 
 args = parser.parse_args()
 
+config_parser = ConfigParser()
+config_parser.readfp(args.conf_file)
+hostname = config_parser.get("lavabo-server", "hostname")
+user = config_parser.get("lavabo-server", "user")
+port = config_parser.getint("lavabo-server", "port")
+
 if args.cmd == "upload" and args.rename is not None and len(args.rename) != len(args.FILES):
     print "There is not the same number of arguments for FILES and --rename."
     sys.exit(0)
@@ -53,9 +59,9 @@ def get_available_port():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('', 0))
     addr = sock.getsockname()
-    port = addr[1]
+    local_port = addr[1]
     sock.close()
-    return port
+    return local_port
 
 def agent_auth(transport, username):
     """
@@ -79,7 +85,7 @@ def agent_auth(transport, username):
 if args.cmd == "upload":
     paramiko.util.log_to_file("paramiko.log")
 
-    transport = paramiko.Transport((args.LAVABO_SERVER, 22))
+    transport = paramiko.Transport((hostname, port))
     try:
         transport.start_client()
     except paramiko.SSHException:
@@ -91,13 +97,13 @@ if args.cmd == "upload":
         keys = {}
 
     key = transport.get_remote_server_key()
-    if args.LAVABO_SERVER not in keys or key.get_name() not in keys[args.LAVABO_SERVER]:
+    if hostname not in keys or key.get_name() not in keys[hostname]:
         print "WARNING: Unknown host key!"
-    elif keys[args.LAVABO_SERVER][key.get_name()] != key:
+    elif keys[hostname][key.get_name()] != key:
         print "ERROR: Host key has changed!!! Avoiding connection."
         sys.exit(1)
 
-    agent_auth(transport, args.LAVABO_SERVER_USER)
+    agent_auth(transport, user)
     if not transport.is_authenticated():
         print "ERROR: Authentication failed."
         transport.close()
@@ -111,7 +117,7 @@ if args.cmd == "upload":
     sftp_client.close()
     transport.close()
 else:
-    ssh = subprocess.Popen(("ssh %s@%s interact" % (args.LAVABO_SERVER_USER, args.LAVABO_SERVER)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    ssh = subprocess.Popen(("ssh %s@%s -p %d interact" % (user, hostname, port)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
     if args.cmd in ["list", "update"]:
         msg = json.dumps({args.cmd: ""})
@@ -127,11 +133,11 @@ else:
     answer = json.loads(answer)
 
     if args.cmd == "serial" and answer["status"] == "success":
-        port = get_available_port()
-        ssh = subprocess.Popen(("ssh -N -L %d:localhost:%d %s@%s" % (port, answer["content"]["port"], args.LAVABO_SERVER_USER, args.LAVABO_SERVER)).split())
+        local_port = get_available_port()
+        ssh = subprocess.Popen(("ssh -N -L %d:localhost:%d %s@%s -p %d" % (local_port, answer["content"]["port"], user, hostname, port)).split())
         serial = None
         for i in range(0,5):
-            serial = pexpect.spawn("telnet localhost %d" % port)
+            serial = pexpect.spawn("telnet localhost %d" % local_port)
             index = serial.expect(["Connected to localhost.", "Connection refused", "Connection closed"])
             if index == 0:
                 break

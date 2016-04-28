@@ -22,13 +22,9 @@ Add your SSH key to the authorized\_keys of one user on your LAVA instance:
 $ ssh-copy-id user@lava_server
 ```
 
-Open `/home/user/.ssh/authorized_keys` and add `command="python /path/to/lavabo-server.py lavabo_user lava_user lava_token lava_server $SSH_ORIGINAL_COMMAND"` at the beginning of every key in this file.
+Open `/home/user/.ssh/authorized_keys` and add `command="python /path/to/lavabo-server.py lavabo_user $SSH_ORIGINAL_COMMAND"` at the beginning of every key in this file.
 
 `lavabo_user` is the name given in lavabo to the user authenticating with this SSH key. It is the name used to make sure not more than one developer is accessing a board at the same time.
-
-`lava_user` and `lava_token` are the credentials for authenticating lavabo-server on LAVA instance.
-
-`lava_server` is the URL of the LAVA server API (it should end with `/RPC2`).
 
 Give sufficient permission to `user` to create directories in the TFTP directory used by LAVA (as advised when installing LAVA, it should be `/var/lib/lava/dispatcher/tmp` or look at `/etc/default/tftpd-hpa`):
 
@@ -36,6 +32,8 @@ Give sufficient permission to `user` to create directories in the TFTP directory
  # chgrp user /var/lib/lava/dispatcher/tmp
  # chmod g+rwx /var/lib/lava/dispacther/tmp
 ```
+
+Complete the lavabo-server.conf with `user` and `token` being the credentials for authenticating lavabo-server on LAVA instance and `url` being the URL of the LAVA server API (it should end with `/RPC2`).
 
 ### lavabo
 
@@ -45,13 +43,7 @@ Install lavabo dependency:
  # apt-get install python-paramiko
 ```
 
-Start controlling your board from your computer:
-
-```
-$ python /path/to/lavabo.py lavabo_server lavabo_server_user [commands]
-```
-
-`lavabo_server_user` being the UNIX user on your LAVA instance hosting lavabo-server which is reachable at `lavabo_server`.
+Complete the lavabo.conf with the appropriate settings.
 
 ## F.A.Q
 

@@ -18,9 +18,9 @@ import StringIO
 
 parser = argparse.ArgumentParser(description="Server to allow remote controlling of boards in LAVA.")
 parser.add_argument("LAVABO_USER", help="user to authenticate against in lavabo")
-parser.add_argument("LAVA_USER", help="username for the LAVA server")
-parser.add_argument("LAVA_TOKEN", help="token for LAVA server API")
-parser.add_argument("LAVA_SERVER", help="URL of LAVA server API")
+
+parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lavabo-server.conf"), help="the location of lavabo-server configuration file. Default: ./lavabo-server.conf.")
+
 parser.add_argument('--tftp-dir', default="/var/lib/lava/dispatcher/tmp/", help="the TFTP root directory used to serve files to boards.")
 
 subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
@@ -99,7 +99,7 @@ def get_status(db_cursor, device_name):
         return create_answer("error", "Device does not exist.")
     device = proxy.scheduler.get_device_status(device_name)
     if device["status"] == "offline":
-        if device["offline_by"] != args.LAVA_USER:
+        if device["offline_by"] != lava_user:
             device["offline_by"] = "Unknown, outside lavabo"
         else:
             db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
@@ -127,7 +127,7 @@ def get_serial(db_cursor, user, device_name):
             time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
     try:
-        if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
+        if device["status"] != "offline" or device["offline_by"] != lava_user:
             return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
         db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
         #FIXME: Fetchone possibly returns None
@@ -154,7 +154,7 @@ def power_on(db_cursor, user, device_name):
             time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
     try:
-        if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
+        if device["status"] != "offline" or device["offline_by"] != lava_user:
             return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
         db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
         #FIXME: Fetchone possibly returns None
@@ -183,7 +183,7 @@ def power_off(db_cursor, user, device_name):
             time.sleep(0.1)
     device = proxy.scheduler.get_device_status(device_name)
     try:
-        if device["status"] != "offline" or device["offline_by"] != args.LAVA_USER:
+        if device["status"] != "offline" or device["offline_by"] != lava_user:
             return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
         db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
         #FIXME: Fetchone possibly returns None
@@ -219,7 +219,7 @@ def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, for
             db_cursor.connection.commit()
             return create_answer("success", "Device put offline.")
         if device["status"] == "offline":
-            if device["offline_by"] != args.LAVA_USER:
+            if device["offline_by"] != lava_user:
                 return create_answer("error", "Device has been reserved in LAVA without this tool.")
             db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
             #FIXME: Fetchone possibly returns None
@@ -253,7 +253,7 @@ def put_online(db_cursor, user, device_name, force=False):
         if device["status"] == "idle":
             return create_answer("success", "Device is already online.")
         if device["status"] == "offline":
-            if device["offline_by"] != args.LAVA_USER:
+            if device["offline_by"] != lava_user:
                 return create_answer("error", "Device has been reserved in LAVA without this tool.")
             db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
             #FIXME: Fetchone possibly returns None
@@ -387,13 +387,19 @@ def init_db():
     db_cursor.close()
 
 args = parser.parse_args()
+config_parser = ConfigParser()
+config_parser.readfp(args.conf_file)
+lava_user = config_parser.get("lava-api", "user")
+lava_token = config_parser.get("lava-api", "token")
+lava_url = config_parser.get("lava-api", "url")
+
 devices = {}
 proxy = None
 db_conn = None
 lock = open("lavabo-server.lock", "w+")
 
 init_db()
-url = validate_input(args.LAVA_USER, args.LAVA_TOKEN, args.LAVA_SERVER)
+url = validate_input(lava_user, lava_token, lava_url)
 proxy = connect(url)
 
 if args.cmd == "internal-sftp":
