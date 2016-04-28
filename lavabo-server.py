@@ -94,10 +94,25 @@ def create_answer(status, content):
     answer["content"] = content
     return json.dumps(answer)
 
-def get_status(device_name):
+def get_status(db_cursor, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    return create_answer("success", proxy.scheduler.get_device_status(device_name))
+    device = proxy.scheduler.get_device_status(device_name)
+    if device["status"] == "offline":
+        if device["offline_by"] != args.LAVA_USER:
+            device["offline_by"] = "Unknown, outside lavabo"
+        else:
+            db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+            #FIXME: Fetchone possibly returns None
+            reservation = db_cursor.fetchone()
+            last_use, made_by, reserved = reservation
+            device["offline_since"] = time.ctime(last_use)
+            if reserved == 0:
+                device["status"] = "reservable"
+                device["offline_by"] = None
+            else:
+                device["offline_by"] = made_by
+    return create_answer("success", device)
 
 def get_serial(db_cursor, user, device_name):
     if not exists(device_name):
@@ -292,9 +307,8 @@ def handle(data, stdout):
         #This is status from LAVA, offline_by will always be "daemon"
         #TODO: Add a status_remote to display the user who is working on the board
         elif "status" in data:
-            status = data["status"]
-            if "board" in status:
-                ans = get_status(status["board"])
+            if "board" in data["status"]:
+                ans = get_status(db_cursor, data["status"]["board"])
         elif "serial" in data:
             if "board" in data["serial"]:
                 ans = get_serial(db_cursor, user, data["serial"]["board"])
