@@ -145,6 +145,14 @@ else:
             serial.close()
         else:
             print "error: Could not establish serial connection."
+            sys.exit(1)
         ssh.terminate()
     else:
-        print "%s: %s" % (answer["status"], answer["content"])
+        if answer["status"] == "error":
+            print "%s: %s" % (answer["status"], answer["content"])
+            sys.exit(1)
+        content = answer["content"]
+        if args.cmd == "list":
+            print "\n".join(content)
+        elif args.cmd == "status":
+            print "%s is %s%s%s%s" % (content["hostname"], content["status"], (" job %d" % content["job"]) if content["job"] else "", (" by %s" % content["offline_by"]) if content["offline_by"] else "", (" since %s" % content["offline_since"]) if content["offline_since"] else "")
