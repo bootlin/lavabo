@@ -94,6 +94,20 @@ def create_answer(status, content):
     answer["content"] = content
     return json.dumps(answer)
 
+def acquire_lock():
+    for i in range(0,5):
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError:
+            if i == 4:
+                return False
+            time.sleep(0.1)
+    return True
+
+def release_lock():
+    fcntl.flock(lock, fcntl.LOCK_UN)
+
 def get_status(db_cursor, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
@@ -117,14 +131,8 @@ def get_status(db_cursor, device_name):
 def get_serial(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    for i in range(0,5):
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except IOError:
-            if i == 4:
-                return create_message("error", "Could not acquire lock.")
-            time.sleep(0.1)
+    if not acquire_lock():
+        return create_message("error", "Could not acquire lock.")
     device = proxy.scheduler.get_device_status(device_name)
     try:
         if device["status"] != "offline" or device["offline_by"] != lava_user:
@@ -139,19 +147,13 @@ def get_serial(db_cursor, user, device_name):
             return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
         return create_answer("success", {"port": int(devices[device_name].get_serial_port())})
     finally:
-        fcntl.flock(lock, fcntl.LOCK_UN)
+        release_lock()
 
 def power_reset(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    for i in range(0,5):
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except IOError:
-            if i == 4:
-                return create_message("error", "Could not acquire lock.")
-            time.sleep(0.1)
+    if not acquire_lock():
+        return create_message("error", "Could not acquire lock.")
     device = proxy.scheduler.get_device_status(device_name)
     try:
         if device["status"] != "offline" or device["offline_by"] != lava_user:
@@ -168,19 +170,13 @@ def power_reset(db_cursor, user, device_name):
             return create_answer("success", "Device successfully powered on.")
         return create_answer("error", "Failed to power on device.")
     finally:
-        fcntl.flock(lock, fcntl.LOCK_UN)
+        release_lock()
 
 def power_off(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    for i in range(0,5):
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except IOError:
-            if i == 4:
-                return create_message("error", "Could not acquire lock.")
-            time.sleep(0.1)
+    if not acquire_lock():
+        return create_message("error", "Could not acquire lock.")
     device = proxy.scheduler.get_device_status(device_name)
     try:
         if device["status"] != "offline" or device["offline_by"] != lava_user:
@@ -197,19 +193,13 @@ def power_off(db_cursor, user, device_name):
             return create_answer("success", "Device successfully powered off.")
         return create_answer("error", "Failed to power off device.")
     finally:
-        fcntl.flock(lock, fcntl.LOCK_UN)
+        release_lock()
 
 def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, force=False):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    for i in range(0,5):
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except IOError:
-            if i == 4:
-                return create_message("error", "Could not acquire lock.")
-            time.sleep(0.1)
+    if not acquire_lock():
+        return create_message("error", "Could not acquire lock.")
     device = proxy.scheduler.get_device_status(device_name)
     try:
         if device["status"] == "idle":
@@ -235,19 +225,13 @@ def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, for
         #FIXME: What about reserved, offlining, running?
         return create_answer("error", "Device is probably running a job.")
     finally:
-        fcntl.flock(lock, fcntl.LOCK_UN)
+        release_lock()
 
 def put_online(db_cursor, user, device_name, force=False):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    for i in range(0,5):
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except IOError:
-            if i == 4:
-                return create_message("error", "Could not acquire lock.")
-            time.sleep(0.1)
+    if not acquire_lock():
+        return create_message("error", "Could not acquire lock.")
     device = proxy.scheduler.get_device_status(device_name)
     try:
         if device["status"] == "idle":
@@ -269,7 +253,7 @@ def put_online(db_cursor, user, device_name, force=False):
         #FIXME: What about reserved, offlining, running?
         return create_answer("error", "Device is probably running a job.")
     finally:
-        fcntl.flock(lock, fcntl.LOCK_UN)
+        release_lock()
 
 def add_user(db_cursor, username):
     try:
