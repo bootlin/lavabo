@@ -275,7 +275,7 @@ def add_user(db_cursor, username):
     try:
         db_cursor.execute("INSERT INTO users VALUES (?)", (username,))
     except sqlite3.IntegrityError:
-        return create_answer("error", "Failed to create user %s." % username)
+        return create_answer("error", "Failed to create user, %s is already used." % username)
     try:
         os.mkdir(os.path.join(args.tftp_dir, username))
     except OSError:
@@ -301,8 +301,10 @@ def handle(data, stdout):
         db_cursor.execute('SELECT * FROM users WHERE username = ?', (user,))
         db_user = db_cursor.fetchone()
         if not db_user:
-            os.write(stdout, create_answer("error", "User does not exist.")+"\n")
-            return
+            ans = add_user(db_cursor, user)
+            if ans["status"] == "error":
+                os.write(stdout, json.dumps(ans)+"\n")
+                return
         ans = create_answer("error", "Missing board name.")
         if "list" in data:
             ans = create_answer("success", list_devices())
@@ -328,11 +330,6 @@ def handle(data, stdout):
         elif "power-off" in data:
             if "board" in data["power-off"]:
                 ans = power_off(db_cursor, user, data["power-off"]["board"])
-        elif "add-user" in data:
-            if "username" in data["add-user"]:
-                ans = add_user(db_cursor, data["add-user"]["username"])
-            else:
-                ans = create_answer("error", "Missing username.")
         else:
             ans = create_answer("error", "Unknown command.")
         os.write(stdout, ans+"\n")

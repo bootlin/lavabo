@@ -16,9 +16,6 @@ parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os
 
 subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
 
-parser_add_user = subparsers.add_parser("add-user", description="Add user to lavabo-server. N.B.: You have to add user's SSH key to the computer hosting lavabo-server.", help="add user to lavabo-server.")
-parser_add_user.add_argument("USERNAME", help="username of the user to add to lavabo-server.")
-
 parser_list = subparsers.add_parser("list", description="List all boards available in LAVA.", help="list available boards")
 
 parser_power_off = subparsers.add_parser("power-off", description="Power board off.", help="power board off.")
@@ -50,7 +47,7 @@ hostname = config_parser.get("lavabo-server", "hostname")
 user = config_parser.get("lavabo-server", "user")
 port = config_parser.getint("lavabo-server", "port")
 
-if args.cmd not in ["upload", "list", "add-user"] and args.BOARD is None:
+if args.cmd not in ["upload", "list"] and args.BOARD is None:
     print "No board specified. Please add BOARD environment variable or as an argument to the command."
     sys.exit(1)
 
@@ -123,8 +120,6 @@ else:
 
     if args.cmd in ["list", "update"]:
         msg = json.dumps({args.cmd: ""})
-    elif args.cmd == "add-user":
-        msg = json.dumps({args.cmd: {"username": args.USERNAME}})
     else:
         msg = json.dumps({args.cmd: {"board": args.BOARD}})
 
