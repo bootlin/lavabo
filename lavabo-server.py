@@ -32,9 +32,9 @@ parser_interact.add_argument('--devices-conf-dir', default="/etc/lava-dispatcher
 
 class Device(object):
 
-    def __init__(self, name, on_command, off_command, serial_command):
+    def __init__(self, name, reset_command, off_command, serial_command):
         self.name = name
-        self.on_command = on_command
+        self.reset_command = reset_command
         self.off_command = off_command
         self.serial_command = serial_command
 
@@ -47,8 +47,8 @@ class Device(object):
     def get_status(self):
         return proxy.scheduler.get_device_status(self.name)
 
-    def power_on(self):
-        return subprocess.call(self.on_command.split(), stdout=open(os.devnull, 'wb'))
+    def power_reset(self):
+        return subprocess.call(self.reset_command.split(), stdout=open(os.devnull, 'wb'))
 
     def power_off(self):
         return subprocess.call(self.off_command.split(), stdout=open(os.devnull, 'wb'))
@@ -67,10 +67,10 @@ def get_device_list(db_conn):
         conf.seek(0)
         config_parser.readfp(conf)
         device_name = config_parser.get("__main__", "hostname")
-        on_command = config_parser.get("__main__", "hard_reset_command")
+        reset_command = config_parser.get("__main__", "hard_reset_command")
         off_command = config_parser.get("__main__", "power_off_cmd")
         serial_command = config_parser.get("__main__", "connection_command")
-        devices[device_name] = Device(device_name, on_command, off_command, serial_command)
+        devices[device_name] = Device(device_name, reset_command, off_command, serial_command)
         db_cursor = db_conn.cursor()
         try:
             db_cursor.execute("INSERT INTO devices VALUES (?)", (device_name,))
@@ -141,7 +141,7 @@ def get_serial(db_cursor, user, device_name):
     finally:
         fcntl.flock(lock, fcntl.LOCK_UN)
 
-def power_on(db_cursor, user, device_name):
+def power_reset(db_cursor, user, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
     for i in range(0,5):
@@ -164,7 +164,7 @@ def power_on(db_cursor, user, device_name):
             return create_answer("error", "You have to reserve the device.")
         if made_by != user:
             return create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-        if devices[device_name].power_on() == 0:
+        if devices[device_name].power_reset() == 0:
             return create_answer("success", "Device successfully powered on.")
         return create_answer("error", "Failed to power on device.")
     finally:
@@ -322,9 +322,9 @@ def handle(data, stdout):
         elif "reserve" in data:
             if "board" in data["reserve"]:
                 ans = put_offline(db_cursor, user, data["reserve"]["board"], data["reserve"].get("thief", False), data["reserve"].get("cancel_job", False))
-        elif "power-on" in data:
-            if "board" in data["power-on"]:
-                ans = power_on(db_cursor, user, data["power-on"]["board"])
+        elif "power-reset" in data:
+            if "board" in data["power-reset"]:
+                ans = power_reset(db_cursor, user, data["power-reset"]["board"])
         elif "power-off" in data:
             if "board" in data["power-off"]:
                 ans = power_off(db_cursor, user, data["power-off"]["board"])

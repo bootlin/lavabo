@@ -24,8 +24,8 @@ parser_list = subparsers.add_parser("list", description="List all boards availab
 parser_power_off = subparsers.add_parser("power-off", description="Power board off.", help="power board off.")
 parser_power_off.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to power off. If omitted, gotten from BOARD environment variable.")
 
-parser_power_on = subparsers.add_parser("power-on", description="Power board on.", help="power board on.")
-parser_power_on.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to power on. If omitted, gotten from BOARD environment variable.")
+parser_power_reset = subparsers.add_parser("power-reset", description="Reset board's power.", help="reset board's power.")
+parser_power_reset.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to power-reset. If omitted, gotten from BOARD environment variable.")
 
 parser_release = subparsers.add_parser("release", description="Release the board and put it online in LAVA if possible.", help="release the board and put it online in LAVA if possible.")
 parser_release.add_argument("BOARD", nargs="?", default=os.environ.get("BOARD", None), help="hostname of the board to put online. If omitted, gotten from BOARD environment variable.")
