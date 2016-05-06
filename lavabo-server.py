@@ -39,13 +39,22 @@ class Device(object):
         self.serial_command = serial_command
 
     def put_offline(self, user):
-        return proxy.scheduler.put_into_maintenance_mode(self.name, "Put offline by %s" % user)
+        try:
+            return proxy.scheduler.put_into_maintenance_mode(self.name, "Put offline by %s" % user)
+        except xmlrpclib.Fault as e:
+            return create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     def put_online(self, user):
-        return proxy.scheduler.put_into_online_mode(self.name, "Put online by %s" % user)
+        try:
+            return proxy.scheduler.put_into_online_mode(self.name, "Put online by %s" % user)
+        except xmlrpclib.Fault as e:
+            return create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     def get_status(self):
-        return proxy.scheduler.get_device_status(self.name)
+        try:
+            return proxy.scheduler.get_device_status(self.name)
+        except xmlrpclib.Fault as e:
+            return create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     def power_reset(self):
         return subprocess.call(self.reset_command.split(), stdout=open(os.devnull, 'wb'))
@@ -111,7 +120,9 @@ def release_lock():
 def get_status(db_cursor, device_name):
     if not exists(device_name):
         return create_answer("error", "Device does not exist.")
-    device = proxy.scheduler.get_device_status(device_name)
+    device = devices[device_name].get_status()
+    if device["status"] == "error":
+        return json.dumps(device)
     if device["status"] == "offline":
         if device["offline_by"] != lava_user:
             device["offline_by"] = "Unknown, outside lavabo"
@@ -133,7 +144,9 @@ def get_serial(db_cursor, user, device_name):
         return create_answer("error", "Device does not exist.")
     if not acquire_lock():
         return create_message("error", "Could not acquire lock.")
-    device = proxy.scheduler.get_device_status(device_name)
+    device = devices[device_name].get_status()
+    if device["status"] == "error":
+        return json.dumps(device)
     try:
         if device["status"] != "offline" or device["offline_by"] != lava_user:
             return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
@@ -154,7 +167,9 @@ def power_reset(db_cursor, user, device_name):
         return create_answer("error", "Device does not exist.")
     if not acquire_lock():
         return create_message("error", "Could not acquire lock.")
-    device = proxy.scheduler.get_device_status(device_name)
+    device = devices[device_name].get_status()
+    if device["status"] == "error":
+        return json.dumps(device)
     try:
         if device["status"] != "offline" or device["offline_by"] != lava_user:
             return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
@@ -177,7 +192,9 @@ def power_off(db_cursor, user, device_name):
         return create_answer("error", "Device does not exist.")
     if not acquire_lock():
         return create_message("error", "Could not acquire lock.")
-    device = proxy.scheduler.get_device_status(device_name)
+    device = devices[device_name].get_status()
+    if device["status"] == "error":
+        return json.dumps(device)
     try:
         if device["status"] != "offline" or device["offline_by"] != lava_user:
             return create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
@@ -200,7 +217,9 @@ def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, for
         return create_answer("error", "Device does not exist.")
     if not acquire_lock():
         return create_message("error", "Could not acquire lock.")
-    device = proxy.scheduler.get_device_status(device_name)
+    device = devices[device_name].get_status()
+    if device["status"] == "error":
+        return json.dumps(device)
     try:
         if device["status"] == "idle":
             if devices[device_name].put_offline(user):
@@ -232,7 +251,9 @@ def put_online(db_cursor, user, device_name, force=False):
         return create_answer("error", "Device does not exist.")
     if not acquire_lock():
         return create_message("error", "Could not acquire lock.")
-    device = proxy.scheduler.get_device_status(device_name)
+    device = devices[device_name].get_status()
+    if device["status"] == "error":
+        return json.dumps(device)
     try:
         if device["status"] == "idle":
             return create_answer("success", "Device is already online.")
