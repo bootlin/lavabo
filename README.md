@@ -22,7 +22,7 @@ Add your SSH key to the authorized\_keys of one user on your LAVA instance:
 $ ssh-copy-id user@lava_server
 ```
 
-Open `/home/user/.ssh/authorized_keys` and add `command="python /path/to/lavabo-server.py lavabo_user $SSH_ORIGINAL_COMMAND"` at the beginning of every key in this file.
+Open `/home/user/.ssh/authorized_keys` and add `command="python /path/to/lavabo-server lavabo_user $SSH_ORIGINAL_COMMAND"` at the beginning of every key in this file.
 
 `lavabo_user` is the name given in lavabo to the user authenticating with this SSH key. It is the name used to make sure not more than one developer is accessing a board at the same time.
 
@@ -57,7 +57,7 @@ As we want to work on the board without being interrupted by LAVA, we also have 
 
 ### What can lavabo do on a board?
 
-`$ lavabo.py -h` should be enough and is up-to-date.
+`$ lavabo -h` should be enough and is up-to-date.
 
 ### How are files served to the board?
 
