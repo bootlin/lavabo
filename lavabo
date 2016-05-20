@@ -29,7 +29,7 @@ import time
 from ConfigParser import ConfigParser
 
 parser = argparse.ArgumentParser(description="Client to connect to lavabo-server used to remote control boards in LAVA.")
-parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "lavabo.conf"), help="the location of lavaboconfiguration file. Default: ./lavabo.conf.")
+parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os.path.join(os.path.expanduser("~"), ".lavabo.conf"), help="the location of lavaboconfiguration file. Default: $HOME/.lavabo.conf.")
 
 subparsers = parser.add_subparsers(dest='cmd', help="subcommands help")
 
