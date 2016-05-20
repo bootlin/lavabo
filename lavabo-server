@@ -258,9 +258,9 @@ def handle(data, stdout):
         elif "reserve" in data:
             if "board" in data["reserve"]:
                 ans = put_offline(db_cursor, user, data["reserve"]["board"], data["reserve"].get("thief", False), data["reserve"].get("cancel_job", False))
-        elif "power-reset" in data:
-            if "board" in data["power-reset"]:
-                ans = power_reset(db_cursor, user, data["power-reset"]["board"])
+        elif "reset" in data:
+            if "board" in data["reset"]:
+                ans = power_reset(db_cursor, user, data["reset"]["board"])
         elif "power-off" in data:
             if "board" in data["power-off"]:
                 ans = power_off(db_cursor, user, data["power-off"]["board"])
