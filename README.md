@@ -40,7 +40,7 @@ Complete the lavabo-server.conf with `user` and `token` being the credentials fo
 Install lavabo dependency:
 
 ```
- # apt-get install python-paramiko
+ # apt-get install python-paramiko python-argcomplete
 ```
 
 Copy ```lavabo.conf`` as ```$HOME/.lavabo.conf``` and adapt it with the appropriate settings.
@@ -62,3 +62,18 @@ As we want to work on the board without being interrupted by LAVA, we also have 
 ### How are files served to the board?
 
 LAVA uses TFTP to serve files to the board, so all we need is to send files from our laptop to the TFTP directory of the LAVA instance which can be specified by `--tftp-dir` in lavabo-server. We use SFTP protocol to perform this task. Thus, we can access from the board the files we need on LAVA instance TFTP server under a subdirectory named after the username specified with each SSH key.
+
+### How to enable autocompletion?
+
+- Bash
+Add `eval "$(register-python-argcomplete lavabo)"` to your .bashrc.
+
+- Zsh
+Add to your .zshrc:
+```
+autoload -U +X compinit && compinit
+autoload -U +X bashcompinit && bashcompinit
+eval "$(register-python-argcomplete lavabo)"
+```
+
+Source: http://argcomplete.readthedocs.io/en/latest/#synopsis
