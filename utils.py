@@ -34,6 +34,8 @@ def get_device_list(db_conn, devices_conf_dir):
     config_parser = ConfigParser()
 
     for conf_file in os.listdir(devices_conf_dir):
+        if conf_file.startswith("."):
+            continue
         conf = StringIO.StringIO()
         conf.write('[__main__]\n')
         conf.write(open(os.path.join(devices_conf_dir, conf_file)).read())
