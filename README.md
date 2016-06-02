@@ -43,7 +43,7 @@ Install lavabo dependency:
  # apt-get install python-paramiko
 ```
 
-Complete the lavabo.conf with the appropriate settings.
+Copy ```lavabo.conf`` as ```$HOME/.lavabo.conf``` and adapt it with the appropriate settings.
 
 ## F.A.Q
 
