@@ -110,48 +110,55 @@ def get_available_port():
     sock.close()
     return local_port
 
-def agent_auth(transport, username):
-    """
-    Attempt to authenticate to the given transport using any of the private
-    keys available from an SSH agent.
-    """
+def get_hostkey():
+    try:
+        hkeys = paramiko.util.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
+    except IOError:
+        hkeys = {}
 
-    agent = paramiko.Agent()
-    agent_keys = agent.get_keys()
-    if len(agent_keys) == 0:
-        return
+    if hostname in hkeys:
+        hkeytype = hkeys[hostname].keys()[0]
+        return hkeys[hostname][hkeytype]
 
-    for key in agent_keys:
+    print "WARNING: host key unavailable"
+    return None
+
+def pkey_connect(transport):
+    for pkey in paramiko.Agent().get_keys():
         try:
-            transport.auth_publickey(username, key)
-            print "Successfull authentication."
-            return
+            transport.auth_publickey(user, pkey)
+            break
         except paramiko.SSHException:
             pass
+
 if args.cmd == "upload":
+    hkey = get_hostkey()
     transport = paramiko.Transport((hostname, port))
-    try:
-        transport.start_client()
-    except paramiko.SSHException:
-        print "SSH negotiation failed."
-        sys.exit(1)
-    try:
-        keys = paramiko.util.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
-    except IOError:
-        keys = {}
 
-    key = transport.get_remote_server_key()
-    if hostname not in keys or key.get_name() not in keys[hostname]:
-        print "WARNING: Unknown host key!"
-    elif keys[hostname][key.get_name()] != key:
-        print "ERROR: Host key has changed!!! Avoiding connection."
-        sys.exit(1)
+    # We must set _preferred_keys before calling start_client() otherwise
+    # there's a chance Paramiko won't negotiate the host key type we have
+    # in our local known_keys... And there's no way to set it properly.
+    if hkey is not None:
+        transport._preferred_keys = [hkey.get_name()]
 
-    agent_auth(transport, user)
+    transport.start_client()
+
+    # Host key checks
+    if hkey is not None:
+        rkey = transport.get_remote_server_key()
+        if rkey.get_name() != hkey.get_name() or rkey.asbytes() != hkey.asbytes():
+            print "ERROR: remote host identification has changed!"
+            sys.exit(1)
+
+    # We don't use the connect() method directly because it can't handle
+    # multiple keys from the SSH agent. It's also not possible to call it
+    # multiple time as a workaround because this genius calls start_client()
+    pkey_connect(transport)
     if not transport.is_authenticated():
         print "ERROR: Authentication failed."
         transport.close()
         sys.exit(1)
+
     sftp_client = transport.open_sftp_client()
 
     for upload in args.FILES:
