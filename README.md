@@ -38,7 +38,7 @@ used by LAVA (as advised when installing LAVA, it should be
 
 ```
 # chgrp user /var/lib/lava/dispatcher/tmp
-# chmod g+rwx /var/lib/lava/dispacther/tmp
+# chmod g+rwx /var/lib/lava/dispatcher/tmp
 ```
 
 Complete the lavabo-server.conf with `user` and `token` being the credentials
