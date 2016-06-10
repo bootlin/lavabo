@@ -129,8 +129,6 @@ def agent_auth(transport, username):
         except paramiko.SSHException:
             pass
 if args.cmd == "upload":
-    paramiko.util.log_to_file("paramiko.log")
-
     transport = paramiko.Transport((hostname, port))
     try:
         transport.start_client()
