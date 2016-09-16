@@ -29,6 +29,7 @@ import pexpect
 import time
 from ConfigParser import ConfigParser
 import argcomplete
+from tabulate import tabulate
 
 def board_completer(prefix, parsed_args, **kwargs):
     config_parser = ConfigParser()
@@ -205,6 +206,9 @@ else:
             sys.exit(1)
         content = answer["content"]
         if args.cmd == "list":
-            print "\n".join(content)
+            if isinstance(content, list) and all(isinstance(cont, basestring) for cont in content):
+                print "\n".join(content)
+            else:
+                print tabulate(content, headers="keys")
         elif args.cmd == "status":
             print "%s is %s%s%s%s" % (content["hostname"], content["status"], (" job %d" % content["job"]) if content["job"] else "", (" by %s" % content["offline_by"]) if content["offline_by"] else "", (" since %s" % content["offline_since"]) if content["offline_since"] else "")

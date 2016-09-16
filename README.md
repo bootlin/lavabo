@@ -31,7 +31,8 @@ serials with *ser2net*. The machine hosting Lavabo server should be accessible
 via SSH as all communications use this protocol.
 
 Lavabo client needs a few programs to be installed: *telnet*, *ssh*,
-*python-paramiko* and *python-argcomplete* for autocompletion.
+*python-paramiko*, *python-argcomplete* for autocompletion, *python-tabulate*
+for pretty printing the result of `lavabo list`.
 
 ## Configuration
 

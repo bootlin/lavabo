@@ -43,8 +43,15 @@ parser_interact = subparsers.add_parser("interact", description="Listen to stdin
 
 parser_interact.add_argument('--devices-conf-dir', default="/etc/lava-dispatcher/devices/", help="the directory used to store LAVA device configuration files.")
 
-def list_devices():
-    return sorted(devices.keys())
+def list_devices(db_cursor):
+    devices_status = []
+    for device in sorted(devices):
+        ans = get_status(db_cursor, device)
+        ans = json.loads(ans)
+        if ans["status"] != "success":
+            return sorted(devices.keys())
+        devices_status.append(ans["content"])
+    return devices_status
 
 def get_status(db_cursor, device_name):
     if not device_name in devices:
@@ -241,7 +248,7 @@ def handle(data, stdout):
                 return
         ans = utils.create_answer("error", "Missing board name.")
         if "list" in data:
-            ans = utils.create_answer("success", list_devices())
+            ans = utils.create_answer("success", list_devices(db_cursor))
         elif "upload" in data:
             ans = utils.create_answer("success", str(os.path.join(args.tftp_dir, user)))
         #This is status from LAVA, offline_by will always be "daemon"
