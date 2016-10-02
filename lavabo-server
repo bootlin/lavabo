@@ -53,6 +53,24 @@ def list_devices(db_cursor):
         devices_status.append(ans["content"])
     return devices_status
 
+def where(device_name):
+    if not device_name in devices:
+        return utils.create_answer("error", "Device does not exist.")
+    device_parser = argparse.ArgumentParser()
+    device_parser.add_argument("pduclient")
+    device_parser.add_argument("--daemon")
+    device_parser.add_argument("--hostname")
+    device_parser.add_argument("--port")
+    device_parser.add_argument("--command")
+    device_parser.add_argument("--delay")
+
+    try:
+        device_args = device_parser.parse_args(devices[device_name].reset_command.split())
+    except:
+        return utils.create_answer("error", "program used to control power not supported. Impossible to parse.")
+
+    return utils.create_answer("success", {"hostname": device_args.hostname, "port": device_args.port})
+
 def get_status(db_cursor, device_name):
     if not device_name in devices:
         return utils.create_answer("error", "Device does not exist.")
@@ -256,6 +274,9 @@ def handle(data, stdout):
         elif "status" in data:
             if "board" in data["status"]:
                 ans = get_status(db_cursor, data["status"]["board"])
+        elif "where" in data:
+            if "board" in data["where"]:
+                ans = where(data["where"]["board"])
         elif "serial" in data:
             if "board" in data["serial"]:
                 ans = get_serial(db_cursor, user, data["serial"]["board"])

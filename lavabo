@@ -76,6 +76,9 @@ parser_status.add_argument("BOARD", nargs="?", default=os.environ.get("LAVABO_BO
 parser_upload = subparsers.add_parser("upload", description="Send files to lavabo-server.", help="send files to lavabo-server.")
 parser_upload.add_argument("FILES", nargs="+", help="full path of the files to send. You can rename the files after being uploaded by separating local filenames and remote filenames with a colon (:). e.g.: upload file1:file2 file2:file3 will upload file1 and file2 and respectively rename them file2 and file3 on lavabo-server.")
 
+parser_where = subparsers.add_parser("where", description="Locate board in lab.", help="locate board in lab.")
+parser_where.add_argument("BOARD", nargs="?", default=os.environ.get("LAVABO_BOARD", None), help="hostname of the board to locate. If omitted, gotten from LAVABO_BOARD environment variable.").completer = board_completer
+
 def send_message(cmd, user, hostname, port, board=None):
     ssh = subprocess.Popen(("ssh %s@%s -p %d interact" % (user, hostname, port)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
@@ -212,3 +215,5 @@ else:
                 print tabulate(content, headers="keys")
         elif args.cmd == "status":
             print "%s is %s%s%s%s" % (content["hostname"], content["status"], (" job %d" % content["job"]) if content["job"] else "", (" by %s" % content["offline_by"]) if content["offline_by"] else "", (" since %s" % content["offline_since"]) if content["offline_since"] else "")
+        elif args.cmd == "where":
+            print "%s is located at %s port %s" % (args.BOARD, content["hostname"], content["port"])
