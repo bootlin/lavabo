@@ -24,6 +24,9 @@ The client connects to the server through SSH and send commands. To get a
 serial, a port-forwarding SSH process is spawn and a local telnet instance is
 created. To send files, the SFTP protocol is used.
 
+A third part of lavabo called lavabo-watchdog is also available to automatically
+send mail to people who reserved a board a long time ago and did not release it.
+
 ## Requirements
 
 Lavabo server needs a running LAVA instance, configured to access the board's
@@ -76,6 +79,21 @@ specified.
 
 Copy ```lavabo.conf``` as ```$HOME/.lavabo.conf``` and adapt it with the
 appropriate settings.
+
+### lavabo-watchdog
+
+Adapt ```lavabo-watchdog.conf``` to match your SMTP credentials and lab
+user authentication.
+
+```delta``` is the authorized delta in days between the reservation date and the
+current day before lavabo-watchdog shall send a reminder by mail.
+
+```working-dir``` is the directory from which lavabo-server is usually launched.
+It is the $HOME directory of the UNIX user used for lavabo-server on the machine
+hosting LAVA server. Basically, if you're connecting to lavabo-server with
+lab@lavabo-server.com, your ```working-dir``` would be ```/home/lab```.
+
+Add lavabo-watchdog to your cron table.
 
 ## F.A.Q
 

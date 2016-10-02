@@ -1,0 +1,72 @@
+#! /usr/bin/python2
+
+#  Copyright 2016 Quentin Schulz <quentin.schulz@free-electrons.com>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+
+from ConfigParser import ConfigParser
+import datetime
+import argparse
+import json
+import subprocess
+import sys
+import smtplib
+from email.mime.text import MIMEText
+
+parser = argparse.ArgumentParser(description="Watchdog sending mail when a board hasn't been released for a while.")
+parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), help="the location of lavabo-watchdog configuration file.")
+
+args = parser.parse_args()
+
+if not args.conf_file:
+    print "--conf-file (-c) has to be set."
+    sys.exit(1)
+
+config_parser = ConfigParser()
+config_parser.readfp(args.conf_file)
+
+lavabo_server = subprocess.Popen(("python %s lab interact" % config_parser.get("lavabo-server", "executable")).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=config_parser.get("lavabo-server", "working-dir"))
+lavabo_server.stdin.write(json.dumps({"list": ""}))
+lavabo_server.stdin.flush()
+answer = lavabo_server.stdout.readline()
+lavabo_server.terminate()
+
+answer = json.loads(answer)
+
+if answer["status"] != "success":
+    #TODO: Add log or send mail
+    sys.exit(1)
+
+content = answer["content"]
+for device in content:
+    if device["status"] == "offline":
+        if not config_parser.has_option("users", device["offline_by"]):
+            continue
+        reservation = datetime.datetime.strptime(device["offline_since"], "%a %b %d %H:%M:%S %Y")
+        now = datetime.datetime.now()
+        if now - reservation > datetime.timedelta(config_parser.getint("lavabo-watchdog", "delta")):
+            user = config_parser.get("users", device["offline_by"])
+            mail = config_parser.get("smtp-server", "mail")
+            msg = MIMEText("You reserved %s %d days ago and haven't released it yet.\nIf you're not actively working on it, please mind releasing it so automated tests can be run on it." % (device["hostname"], (now - reservation).days))
+            msg['Subject'] = "Your reservation of %s" % device["hostname"]
+            msg['To'] = user
+            msg['From'] = mail
+            server = smtplib.SMTP(config_parser.get("smtp-server", "server"), config_parser.get("smtp-server","port"))
+            server.ehlo()
+            server.starttls()
+            server.login(config_parser.get("smtp-server", "login"), config_parser.get("smtp-server", "password"))
+            server.sendmail(mail, [user], msg.as_string())
+            server.quit()
