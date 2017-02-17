@@ -46,7 +46,7 @@ def board_completer(prefix, parsed_args, **kwargs):
     if answer["status"] != "success":
         argcomplete.warn("error: %s" % answer["content"])
         sys.exit(1)
-    return (board for board in answer["content"] if board.startswith(prefix))
+    return [board['hostname'] for board in answer["content"] if board['hostname'].startswith(prefix)]
 
 parser = argparse.ArgumentParser(description="Client to connect to lavabo-server used to remote control boards in LAVA.")
 parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os.path.join(os.path.expanduser("~"), ".lavabo.conf"), help="the location of lavaboconfiguration file. Default: $HOME/.lavabo.conf.")
