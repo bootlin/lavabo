@@ -28,23 +28,31 @@ import time
 import ssl
 import urlparse
 import xmlrpclib
+import re
 
-def get_device_list(db_conn, devices_conf_dir):
+
+def get_device_list(db_conn, proxy):
     devices = {}
-    config_parser = ConfigParser()
 
-    for conf_file in os.listdir(devices_conf_dir):
-        if conf_file.startswith("."):
+    for d in proxy.scheduler.all_devices():
+        # prnt(d)
+        try:
+            conf = str(proxy.scheduler.export_device_dictionary(d[0]))
+        except:
             continue
-        conf = StringIO.StringIO()
-        conf.write('[__main__]\n')
-        conf.write(open(os.path.join(devices_conf_dir, conf_file)).read())
-        conf.seek(0)
-        config_parser.readfp(conf)
-        device_name = config_parser.get("__main__", "hostname")
-        reset_command = config_parser.get("__main__", "hard_reset_command")
-        off_command = config_parser.get("__main__", "power_off_cmd")
-        serial_command = config_parser.get("__main__", "connection_command")
+        reset_command_re = re.compile("hard_reset_command = '(.*)'")
+        connection_command_re = re.compile("connection_command = '(.*)'")
+        power_on_command_re = re.compile("power_on_command = '(.*)'")
+        power_off_command_re = re.compile("power_off_command = '(.*)'")
+        device_name = d[0]
+        try: reset_command = reset_command_re.search(conf).group(1)
+        except: reset_command = ""
+        try: off_command = power_off_command_re.search(conf).group(1)
+        except: off_command = ""
+        try: on_command = power_on_command_re.search(conf).group(1)
+        except: on_command = ""
+        try: serial_command = connection_command_re.search(conf).group(1)
+        except: serial_command = ""
         devices[device_name] = device.Device(device_name, reset_command, off_command, serial_command)
         db_cursor = db_conn.cursor()
         try:

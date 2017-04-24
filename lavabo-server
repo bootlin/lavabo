@@ -41,8 +41,6 @@ parser_sftp = subparsers.add_parser("internal-sftp", description="Launch sftp se
 
 parser_interact = subparsers.add_parser("interact", description="Listen to stdin and answer to stdout.", help="listen to stdin and answer to stdout.")
 
-parser_interact.add_argument('--devices-conf-dir', default="/etc/lava-dispatcher/devices/", help="the directory used to store LAVA device configuration files.")
-
 def list_devices(db_cursor):
     devices_status = []
     for device in sorted(devices):
@@ -335,5 +333,5 @@ proxy = utils.connect(url)
 if args.cmd == "internal-sftp":
     subprocess.call(("/usr/lib/openssh/sftp-server -d %s" % os.path.join(args.tftp_dir, args.LAVABO_USER)).split())
 else:
-    devices = utils.get_device_list(db_conn, args.devices_conf_dir)
+    devices = utils.get_device_list(db_conn, proxy)
     serve()
