@@ -80,7 +80,7 @@ parser_where = subparsers.add_parser("where", description="Locate board in lab."
 parser_where.add_argument("BOARD", nargs="?", default=os.environ.get("LAVABO_BOARD", None), help="hostname of the board to locate. If omitted, gotten from LAVABO_BOARD environment variable.").completer = board_completer
 
 def send_message(cmd, user, hostname, port, board=None):
-    ssh = subprocess.Popen(("ssh %s@%s -p %d interact" % (user, hostname, port)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    ssh = subprocess.Popen(("ssh -q %s@%s -p %d interact" % (user, hostname, port)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
     if cmd in ["list", "update"]:
         msg = json.dumps({cmd: ""})
@@ -184,7 +184,7 @@ else:
 
     if args.cmd == "serial" and answer["status"] == "success":
         local_port = get_available_port()
-        ssh = subprocess.Popen(("ssh -N -L %d:localhost:%d %s@%s -p %d" % (local_port, answer["content"]["port"], user, hostname, port)).split())
+        ssh = subprocess.Popen(("ssh -q -N -L %d:localhost:%d %s@%s -p %d" % (local_port, answer["content"]["port"], user, hostname, port)).split())
         serial = None
         for i in range(0,5):
             serial = pexpect.spawn("telnet localhost %d" % local_port)
