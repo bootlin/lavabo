@@ -37,7 +37,7 @@ def board_completer(prefix, parsed_args, **kwargs):
     hostname = config_parser.get("lavabo-server", "hostname")
     user = config_parser.get("lavabo-server", "user")
     port = config_parser.getint("lavabo-server", "port")
-    answer = send_message("list", user, hostname, port)
+    answer = send_message("simple-list", user, hostname, port)
     try:
         answer = json.loads(answer)
     except ValueError as e:
@@ -46,7 +46,7 @@ def board_completer(prefix, parsed_args, **kwargs):
     if answer["status"] != "success":
         argcomplete.warn("error: %s" % answer["content"])
         sys.exit(1)
-    return [board['hostname'] for board in answer["content"] if board['hostname'].startswith(prefix)]
+    return [board[0] for board in answer["content"] if board[0].startswith(prefix)]
 
 parser = argparse.ArgumentParser(description="Client to connect to lavabo-server used to remote control boards in LAVA.")
 parser.add_argument("-c", "--conf-file", type=argparse.FileType("r"), default=os.path.join(os.path.expanduser("~"), ".lavabo.conf"), help="the location of lavaboconfiguration file. Default: $HOME/.lavabo.conf.")
@@ -82,7 +82,7 @@ parser_where.add_argument("BOARD", nargs="?", default=os.environ.get("LAVABO_BOA
 def send_message(cmd, user, hostname, port, board=None):
     ssh = subprocess.Popen(("ssh -q %s@%s -p %d interact" % (user, hostname, port)).split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-    if cmd in ["list", "update"]:
+    if cmd in ["list", "update", "simple-list"]:
         msg = json.dumps({cmd: ""})
     else:
         msg = json.dumps({cmd: {"board": board}})

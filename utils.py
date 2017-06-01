@@ -30,6 +30,8 @@ import urlparse
 import xmlrpclib
 import re
 
+def get_simple_device_list(proxy):
+    proxy.scheduler.all_devices()
 
 def get_device_list(db_conn, proxy):
     devices = {}
