@@ -265,7 +265,7 @@ def handle(data, stdout):
         ans = utils.create_answer("error", "Missing board name.")
         if "list" in data:
             ans = utils.create_answer("success", list_devices(db_cursor))
-        if "simple-list" in data:
+        elif "simple-list" in data:
             ans = utils.create_answer("success", utils.get_simple_device_list(proxy))
         elif "upload" in data:
             ans = utils.create_answer("success", str(os.path.join(args.tftp_dir, user)))
