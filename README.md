@@ -77,12 +77,12 @@ specified.
 
 ### lavabo
 
-Copy ```lavabo.conf``` as ```$HOME/.lavabo.conf``` and adapt it with the
+Copy ```lavabo.conf.sample``` as ```$HOME/.lavabo.conf``` and adapt it with the
 appropriate settings.
 
 ### lavabo-watchdog
 
-Adapt ```lavabo-watchdog.conf``` to match your SMTP credentials and lab
+Adapt ```lavabo-watchdog.conf.sample``` to match your SMTP credentials and lab
 user authentication.
 
 ```delta``` is the authorized delta in days between the reservation date and the
