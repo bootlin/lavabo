@@ -1,0 +1,4 @@
+paramiko
+tabulate
+pexpect
+argcomplete
