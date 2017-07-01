@@ -33,6 +33,8 @@ Lavabo server needs a running LAVA instance, configured to access the board's
 serials with *ser2net*. The machine hosting Lavabo server should be accessible
 via SSH as all communications use this protocol.
 
+Lavabo server will only work with pipeline (LAVA v2) devices.
+
 Lavabo client needs a few programs to be installed: *telnet*, *ssh*,
 *python-paramiko*, *python-argcomplete* for autocompletion, *python-tabulate*
 for pretty printing the result of `lavabo list`.

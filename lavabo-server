@@ -28,6 +28,8 @@ import select
 import sys
 import fcntl
 import utils
+import xmlrpclib
+import re
 
 parser = argparse.ArgumentParser(description="Server to allow remote controlling of boards in LAVA.")
 parser.add_argument("LAVABO_USER", help="user to authenticate against in lavabo")
@@ -43,36 +45,36 @@ parser_interact = subparsers.add_parser("interact", description="Listen to stdin
 
 def list_devices(db_cursor):
     devices_status = []
+    devices = proxy.scheduler.all_devices()
     for device in sorted(devices):
-        ans = get_status(db_cursor, device)
+        ans = get_status(db_cursor, device[0])
         ans = json.loads(ans)
         if ans["status"] != "success":
-            return sorted(devices.keys())
+            return sorted(devices)
         devices_status.append(ans["content"])
     return devices_status
 
 def where(device_name):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
-    device_parser = argparse.ArgumentParser()
-    device_parser.add_argument("pduclient")
-    device_parser.add_argument("--daemon")
-    device_parser.add_argument("--hostname")
-    device_parser.add_argument("--port")
-    device_parser.add_argument("--command")
-    device_parser.add_argument("--delay")
-
     try:
-        device_args = device_parser.parse_args(devices[device_name].reset_command.split())
-    except:
-        return utils.create_answer("error", "program used to control power not supported. Impossible to parse.")
+        device_dict = str(proxy.scheduler.export_device_dictionary(device_name))
+    except xmlrpclib.Fault as e:
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
-    return utils.create_answer("success", {"hostname": device_args.hostname, "port": device_args.port})
+    reset_command_re = re.compile("hard_reset_command = 'pduclient (.*?(--hostname (\w*)|--port (\w*)))*.*'")
+    try:
+        hostname = reset_command_re.search(device_dict).group(3)
+        port = reset_command_re.search(device_dict).group(4)
+    except:
+        return utils.create_answer("error", "could not parse hard reset command to get device location")
+
+    return utils.create_answer("success", {"hostname": hostname, "port": port})
 
 def get_status(db_cursor, device_name):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
-    device = devices[device_name].get_status(proxy)
+    try:
+        device = proxy.scheduler.get_device_status(device_name)
+    except xmlrpclib.Fault as e:
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
     if device["status"] == "error":
         return json.dumps(device)
     if device["status"] == "offline":
@@ -92,11 +94,13 @@ def get_status(db_cursor, device_name):
     return utils.create_answer("success", device)
 
 def get_serial(db_cursor, user, device_name):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
     if not utils.acquire_lock(lock):
         return utils.create_answer("error", "Could not acquire lock.")
-    device = devices[device_name].get_status(proxy)
+    try:
+        device = proxy.scheduler.get_device_status(device_name)
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
     if device["status"] == "error":
         return json.dumps(device)
     try:
@@ -110,16 +114,21 @@ def get_serial(db_cursor, user, device_name):
             return utils.create_answer("error", "You have to reserve the device.")
         if made_by != user:
             return utils.create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-        return utils.create_answer("success", {"port": int(devices[device_name].get_serial_port())})
+        serial_port = utils.get_serial_port(proxy, device_name)
+        if serial_port is None:
+            return utils.create_answer("error", "Could not parse connection command")
+        return utils.create_answer("success", {"port": serial_port})
     finally:
         utils.release_lock(lock)
 
 def power_reset(db_cursor, user, device_name):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
     if not utils.acquire_lock(lock):
         return utils.create_answer("error", "Could not acquire lock.")
-    device = devices[device_name].get_status(proxy)
+    try:
+        device = proxy.scheduler.get_device_status(device_name)
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
     if device["status"] == "error":
         return json.dumps(device)
     try:
@@ -133,18 +142,21 @@ def power_reset(db_cursor, user, device_name):
             return utils.create_answer("error", "You have to reserve the device.")
         if made_by != user:
             return utils.create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-        if devices[device_name].power_reset() == 0:
+        ret = utils.power_reset(proxy, device_name)
+        if ret == 0:
             return utils.create_answer("success", "Device successfully powered on.")
-        return utils.create_answer("error", "Failed to power on device.")
+        return utils.create_answer("error", "Failed to power on device." + str(ret))
     finally:
         utils.release_lock(lock)
 
 def power_off(db_cursor, user, device_name):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
     if not utils.acquire_lock(lock):
         return utils.create_answer("error", "Could not acquire lock.")
-    device = devices[device_name].get_status(proxy)
+    try:
+        device = proxy.scheduler.get_device_status(device_name)
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
     if device["status"] == "error":
         return json.dumps(device)
     try:
@@ -158,23 +170,25 @@ def power_off(db_cursor, user, device_name):
             return utils.create_answer("error", "You have to reserve the device.")
         if made_by != user:
             return utils.create_answer("error", "Device reserved by %s and lastly used %s." % (made_by, time.ctime(last_use)))
-        if devices[device_name].power_off() == 0:
+        if utils.power_off(proxy, device_name) == 0:
             return utils.create_answer("success", "Device successfully powered off.")
         return utils.create_answer("error", "Failed to power off device.")
     finally:
         utils.release_lock(lock)
 
 def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, force=False):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
     if not utils.acquire_lock(lock):
         return utils.create_answer("error", "Could not acquire lock.")
-    device = devices[device_name].get_status(proxy)
+    try:
+        device = proxy.scheduler.get_device_status(device_name)
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
     if device["status"] == "error":
         return json.dumps(device)
     try:
         if device["status"] == "idle":
-            if devices[device_name].put_offline(user, proxy):
+            if utils.put_offline(proxy, device_name, user):
                 return utils.create_answer("error", "Failed to put device offline.")
             db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 1))
             db_cursor.connection.commit()
@@ -199,11 +213,13 @@ def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, for
         utils.release_lock(lock)
 
 def put_online(db_cursor, user, device_name, force=False):
-    if not device_name in devices:
-        return utils.create_answer("error", "Device does not exist.")
     if not utils.acquire_lock(lock):
         return utils.create_answer("error", "Could not acquire lock.")
-    device = devices[device_name].get_status(proxy)
+    try:
+        device = proxy.scheduler.get_device_status(device_name)
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
     if device["status"] == "error":
         return json.dumps(device)
     try:
@@ -217,7 +233,7 @@ def put_online(db_cursor, user, device_name, force=False):
             reservation = db_cursor.fetchone()
             last_use, made_by, reserved = reservation
             if made_by == user:
-                if devices[device_name].put_online(user, proxy):
+                if utils.put_online(proxy, device_name, user):
                     return utils.create_answer("error", "Failed to put device online.")
                 db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, time.time(), user, 0))
                 db_cursor.connection.commit()
@@ -335,5 +351,4 @@ proxy = utils.connect(url)
 if args.cmd == "internal-sftp":
     subprocess.call(("/usr/lib/openssh/sftp-server -d %s" % os.path.join(args.tftp_dir, args.LAVABO_USER)).split())
 else:
-    devices = utils.get_device_list(db_conn, proxy)
     serve()

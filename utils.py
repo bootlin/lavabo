@@ -29,43 +29,65 @@ import ssl
 import urlparse
 import xmlrpclib
 import re
+import subprocess
+from os import devnull
 
 def get_simple_device_list(proxy):
     return proxy.scheduler.all_devices()
 
-def get_device_list(db_conn, proxy):
-    devices = {}
+def get_serial_port(proxy, device_name):
+    try:
+        device_dict = str(proxy.scheduler.export_device_dictionary(device_name))
+    except xmlrpclib.Fault as e:
+        return None
 
-    for d in proxy.scheduler.all_devices():
-        # prnt(d)
-        try:
-            conf = str(proxy.scheduler.export_device_dictionary(d[0]))
-        except:
-            continue
-        reset_command_re = re.compile("hard_reset_command = '(.*)'")
-        connection_command_re = re.compile("connection_command = '(.*)'")
-        power_on_command_re = re.compile("power_on_command = '(.*)'")
-        power_off_command_re = re.compile("power_off_command = '(.*)'")
-        device_name = d[0]
-        try: reset_command = reset_command_re.search(conf).group(1)
-        except: reset_command = ""
-        try: off_command = power_off_command_re.search(conf).group(1)
-        except: off_command = ""
-        try: on_command = power_on_command_re.search(conf).group(1)
-        except: on_command = ""
-        try: serial_command = connection_command_re.search(conf).group(1)
-        except: serial_command = ""
-        devices[device_name] = device.Device(device_name, reset_command, off_command, serial_command)
-        db_cursor = db_conn.cursor()
-        try:
-            db_cursor.execute("INSERT INTO devices VALUES (?)", (device_name,))
-            db_cursor.execute("INSERT INTO reservations VALUES (?, ?, ?, ?)", (device_name, 0, None, 0))
-            db_conn.commit()
-        except sqlite3.IntegrityError:
-            pass
-        finally:
-            db_cursor.close()
-    return devices
+    serial_command_re = re.compile("connection_command = '.* .* (\d*)'")
+    try:
+        return int(serial_command_re.search(device_dict).group(1))
+    except:
+        return None
+
+def power_reset(proxy, device_name):
+    try:
+        device_dict = str(proxy.scheduler.export_device_dictionary(device_name))
+    except xmlrpclib.Fault as e:
+        return -1
+
+    reset_command_re = re.compile("hard_reset_command = '(.*)'")
+    try:
+        reset_command = reset_command_re.search(device_dict).group(1)
+    except:
+        return -2
+
+    return subprocess.call(reset_command.split(), stdout=open(devnull, 'wb'))
+
+def power_off(proxy, device_name):
+    try:
+        device_dict = str(proxy.scheduler.export_device_dictionary(device_name))
+    except xmlrpclib.Fault as e:
+        return -1
+
+    off_command_re = re.compile("power_off_command = '(.*)'")
+    try:
+        off_command = off_command_re.search(device_dict).group(1)
+    except:
+        return -2
+
+    return subprocess.call(off_command.split(), stdout=open(devnull, 'wb'))
+
+def put_offline(proxy, device_name, user):
+    try:
+        proxy.scheduler.put_into_maintenance_mode(device_name, "Put offline by %s" % user)
+        return None
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+
+def put_online(proxy, device_name, user):
+    try:
+        proxy.scheduler.put_into_online_mode(device_name, "Put online by %s" % user)
+        return None
+    except xmlrpclib.Fault as e:
+        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
 def create_json(status, content):
     return {"status": status, "content": content}
