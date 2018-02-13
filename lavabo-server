@@ -53,10 +53,10 @@ def where(device_name):
     except xmlrpclib.Fault as e:
         return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
-    reset_command_re = re.compile("hard_reset_command = 'pduclient (.*?(--hostname (\w*)|--port (\w*)))*.*'")
+    reset_command_re = re.compile("hard_reset_command = '\/opt\/relay\.py (\w*) (\w*).*'")
     try:
-        hostname = reset_command_re.search(device_dict).group(3)
-        port = reset_command_re.search(device_dict).group(4)
+        hostname = reset_command_re.search(device_dict).group(1)
+        port = reset_command_re.search(device_dict).group(2)
     except:
         return utils.create_answer("error", "could not parse hard reset command to get device location")
 
