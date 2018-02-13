@@ -45,6 +45,19 @@ parser_interact = subparsers.add_parser("interact", description="Listen to stdin
 
 def list_devices(db_cursor):
     devices = proxy.scheduler.devices.list(False, True)
+    for device in devices:
+        if device["health"] != "Maintenance":
+            continue
+        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device["hostname"],))
+        #FIXME: Fetchone possibly returns None
+        reservation = db_cursor.fetchone()
+        last_use, made_by, reserved = reservation
+        if reserved:
+            device["offline_by"] = made_by
+            device["offline_since"] = time.ctime(last_use)
+        else:
+            device["offline_by"] = "Unknown, outside lavabo"
+            device["offline_since"] = None
     return devices
 
 def where(device_name):
