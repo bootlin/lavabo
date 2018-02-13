@@ -44,15 +44,8 @@ parser_sftp = subparsers.add_parser("internal-sftp", description="Launch sftp se
 parser_interact = subparsers.add_parser("interact", description="Listen to stdin and answer to stdout.", help="listen to stdin and answer to stdout.")
 
 def list_devices(db_cursor):
-    devices_status = []
-    devices = proxy.scheduler.all_devices()
-    for device in sorted(devices):
-        ans = get_status(db_cursor, device[0])
-        ans = json.loads(ans)
-        if ans["status"] != "success":
-            return sorted(devices)
-        devices_status.append(ans["content"])
-    return devices_status
+    devices = proxy.scheduler.devices.list(False, True)
+    return devices
 
 def where(device_name):
     try:
