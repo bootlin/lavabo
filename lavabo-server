@@ -71,19 +71,16 @@ def get_status(db_cursor, device_name):
     if device["status"] == "error":
         return json.dumps(device)
     if device["status"] == "offline":
-        if device["offline_by"] != lava_user:
-            device["offline_by"] = "Unknown, outside lavabo"
-        else:
-            db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
-            #FIXME: Fetchone possibly returns None
-            reservation = db_cursor.fetchone()
-            last_use, made_by, reserved = reservation
+        db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
+        #FIXME: Fetchone possibly returns None
+        reservation = db_cursor.fetchone()
+        last_use, made_by, reserved = reservation
+        if reserved:
             device["offline_since"] = time.ctime(last_use)
-            if reserved == 0:
-                device["status"] = "reservable"
-                device["offline_by"] = None
-            else:
-                device["offline_by"] = made_by
+            device["offline_by"] = made_by
+        else:
+            device["offline_by"] = "Unknown, outside lavabo"
+            device["offline_since"] = None
     return utils.create_answer("success", device)
 
 def get_serial(db_cursor, user, device_name):
@@ -97,8 +94,8 @@ def get_serial(db_cursor, user, device_name):
     if device["status"] == "error":
         return json.dumps(device)
     try:
-        if device["status"] != "offline" or device["offline_by"] != lava_user:
-            return utils.create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
+        if device["status"] != "offline":
+            return utils.create_answer("error", "Device is not offline in LAVA.")
         db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
         #FIXME: Fetchone possibly returns None
         reservation = db_cursor.fetchone()
@@ -125,8 +122,8 @@ def power_reset(db_cursor, user, device_name):
     if device["status"] == "error":
         return json.dumps(device)
     try:
-        if device["status"] != "offline" or device["offline_by"] != lava_user:
-            return utils.create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
+        if device["status"] != "offline":
+            return utils.create_answer("error", "Device is not offline in LAVA.")
         db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
         #FIXME: Fetchone possibly returns None
         reservation = db_cursor.fetchone()
@@ -153,8 +150,8 @@ def power_off(db_cursor, user, device_name):
     if device["status"] == "error":
         return json.dumps(device)
     try:
-        if device["status"] != "offline" or device["offline_by"] != lava_user:
-            return utils.create_answer("error", "Device is not offline in LAVA or has been reserved in LAVA without this tool.")
+        if device["status"] != "offline":
+            return utils.create_answer("error", "Device is not offline in LAVA.")
         db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
         #FIXME: Fetchone possibly returns None
         reservation = db_cursor.fetchone()
@@ -187,8 +184,6 @@ def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, for
             db_cursor.connection.commit()
             return utils.create_answer("success", "Device put offline.")
         if device["status"] == "offline":
-            if device["offline_by"] != lava_user:
-                return utils.create_answer("error", "Device has been reserved in LAVA without this tool.")
             db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
             #FIXME: Fetchone possibly returns None
             reservation = db_cursor.fetchone()
@@ -219,8 +214,6 @@ def put_online(db_cursor, user, device_name, force=False):
         if device["status"] == "idle":
             return utils.create_answer("success", "Device is already online.")
         if device["status"] == "offline":
-            if device["offline_by"] != lava_user:
-                return utils.create_answer("error", "Device has been reserved in LAVA without this tool.")
             db_cursor.execute("SELECT last_use, made_by, reserved FROM reservations WHERE device_name = ? ORDER BY last_use DESC", (device_name,))
             #FIXME: Fetchone possibly returns None
             reservation = db_cursor.fetchone()
