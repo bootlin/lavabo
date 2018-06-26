@@ -102,7 +102,7 @@ def get_serial(db_cursor, user, device_name):
     try:
         device = proxy.scheduler.get_device_status(device_name)
     except xmlrpclib.Fault as e:
-        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     if device["status"] == "error":
         return json.dumps(device)
@@ -130,7 +130,7 @@ def power_reset(db_cursor, user, device_name):
     try:
         device = proxy.scheduler.get_device_status(device_name)
     except xmlrpclib.Fault as e:
-        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     if device["status"] == "error":
         return json.dumps(device)
@@ -158,7 +158,7 @@ def power_off(db_cursor, user, device_name):
     try:
         device = proxy.scheduler.get_device_status(device_name)
     except xmlrpclib.Fault as e:
-        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     if device["status"] == "error":
         return json.dumps(device)
@@ -185,7 +185,7 @@ def put_offline(db_cursor, user, device_name, thief=False, cancel_job=False, for
     try:
         device = proxy.scheduler.get_device_status(device_name)
     except xmlrpclib.Fault as e:
-        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     if device["status"] == "error":
         return json.dumps(device)
@@ -219,7 +219,7 @@ def put_online(db_cursor, user, device_name, force=False):
     try:
         device = proxy.scheduler.get_device_status(device_name)
     except xmlrpclib.Fault as e:
-        return utils.create_json("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
+        return utils.create_answer("error", "XMLRPC err%d: %s" % (e.faultCode, e.faultString))
 
     if device["status"] == "error":
         return json.dumps(device)
@@ -247,7 +247,7 @@ def add_user(db_cursor, username):
     try:
         db_cursor.execute("INSERT INTO users VALUES (?)", (username,))
     except sqlite3.IntegrityError:
-        return utils.create_json("error", "Failed to create user, %s is already used." % username)
+        return utils.create_answer("error", "Failed to create user, %s is already used." % username)
     try:
         os.mkdir(os.path.join(args.tftp_dir, username))
     except OSError:
@@ -257,9 +257,9 @@ def add_user(db_cursor, username):
         # Test if the UNIX user who launched lavabo-server has
         # sufficient permission to write, read or execute in this directory.
         if not os.access(os.path.join(args.tftp_dir, username), os.R_OK | os.W_OK | os.X_OK):
-            return utils.create_json("error", "Failed to create or access subdirectory for user in TFTP directory. Check UNIX permissions.")
+            return utils.create_answer("error", "Failed to create or access subdirectory for user in TFTP directory. Check UNIX permissions.")
     db_cursor.connection.commit()
-    return utils.create_json("success", "User %s successfully created. Adding user's SSH key to lavabo-server is needed to complete user creation." % username)
+    return utils.create_answer("success", "User %s successfully created. Adding user's SSH key to lavabo-server is needed to complete user creation." % username)
 
 def handle(data, stdout):
     try:
